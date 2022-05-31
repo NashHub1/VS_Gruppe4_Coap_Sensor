@@ -1,0 +1,339 @@
+//*****************************************************************************
+//
+// REST API - basic
+//
+//
+//*****************************************************************************
+#include <event_handler.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdio.h>
+
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_nvic.h"
+#include "inc/hw_types.h"
+#include "driverlib/flash.h"
+#include "driverlib/gpio.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/systick.h"
+#include "driverlib/timer.h"
+#include "driverlib/rom_map.h"
+
+#include "utils/uartstdio.h"
+
+#include "third_party/mongoose/mongoose.h"   // this include has to be before the include of "utils/lwiplib.h" !!!!!
+#include "utils/lwiplib.h"
+
+
+
+
+#include "userlib/io.h"
+#include "userlib/timerIntCtrl.h"
+
+
+#include "helper_functions/temperature_handler.h"
+#include "helper_functions/lightsensor_handler.h"
+
+
+
+
+// Timeout for DHCP address request (in seconds).
+#ifndef DHCP_EXPIRE_TIMER_SECS
+#define DHCP_EXPIRE_TIMER_SECS  45
+#endif
+
+
+
+// Special IP address values that lwiplib uses.
+#define IP_LINK_DOWN (0xffffffffU)
+#define IP_LINK_UP (0)
+
+
+
+
+
+
+// The current IP address.
+uint32_t g_ui32IPAddress;
+
+
+// The system clock frequency.
+uint32_t g_ui32SysClock;
+
+
+char *s_default_address = COAP_SERVER_URL;                             // default adress set to udp port 5683
+
+struct mg_mgr g_mgr;
+
+
+
+
+int gettimeofday(struct timeval *tv, void *tzvp) {
+  tv->tv_sec = time(NULL);
+  tv->tv_usec = 0;
+  return 0;
+}
+
+void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
+}
+
+
+
+
+//*****************************************************************************
+//
+// External Application references.
+//
+//*****************************************************************************
+
+
+// Task declarations
+void vTaskDisplay(void *pvParameters);
+
+void vTaskMongoose(void *pvParameters);
+
+
+
+//*****************************************************************************
+//
+// The error routine that is called if the driver library encounters an error.
+//
+//*****************************************************************************
+#ifdef DEBUG
+void
+__error__(char *pcFilename, uint32_t ui32Line)
+{
+}
+#endif
+
+
+
+
+
+//*****************************************************************************
+//
+// Required by lwIP library to support any host-related timer functions.
+// This function is called in "lwIPServiceTimers()" from the "lwiplib.c" utility
+//   "lwIPServiceTimers()" is called in "lwIPEthernetIntHandler()" from the "lwiplib.c" utility
+//     "lwIPEthernetIntHandler()" is registered in the interrupt vector table (in file "..._startup_ccs.c")
+//
+//*****************************************************************************
+void lwIPHostTimerHandler(void)
+{
+    uint32_t ui32NewIPAddress;
+
+    //
+    // Get the current IP address.
+    //
+    ui32NewIPAddress = lwIPLocalIPAddrGet();
+
+    //
+    // See if the IP address has changed.
+    //
+    if(ui32NewIPAddress != g_ui32IPAddress)
+    {
+        //
+        // See if there is an IP address assigned.
+        //
+        if(ui32NewIPAddress == IP_LINK_DOWN)
+        {
+            //
+            // Indicate that there is no link.
+            //
+            UARTprintf("Waiting for link.\n");
+        }
+        else if(ui32NewIPAddress == IP_LINK_UP)
+        {
+            //
+            // There is no IP address, so indicate that the DHCP process is
+            // running.
+            //
+            UARTprintf("Waiting for IP address.\n");
+        }
+        else
+        {
+            //
+            // Display the new IP address.
+            //
+			UARTprintf("IP Address: %s\n", ipaddr_ntoa((const ip_addr_t *) &ui32NewIPAddress));
+            //UARTprintf("IP Address: %d.%d.%d.%d\n", ui32NewIPAddress & 0xff, (ui32NewIPAddress >> 8) & 0xff, (ui32NewIPAddress >> 16) & 0xff, (ui32NewIPAddress >> 24) & 0xff);
+
+        }
+
+        //
+        // Save the new IP address.
+        //
+        g_ui32IPAddress = ui32NewIPAddress;
+    }
+
+
+}
+
+
+
+//*****************************************************************************
+//
+// Main function
+// Simple embedded web server
+//
+//*****************************************************************************
+int main(void)
+{
+    uint32_t ui32User0, ui32User1;
+    uint8_t pui8MACArray[8];
+
+
+    //
+    // Make sure the main oscillator is enabled because this is required by
+    // the PHY.  The system must have a 25MHz crystal attached to the OSC
+    // pins.  The SYSCTL_MOSC_HIGHFREQ parameter is used when the crystal
+    // frequency is 10MHz or higher.
+    //
+    SysCtlMOSCConfigSet(SYSCTL_MOSC_HIGHFREQ);
+
+    //
+    // Run from the PLL at 120 MHz.
+    //
+    g_ui32SysClock = MAP_SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
+                                             SYSCTL_OSC_MAIN |
+                                             SYSCTL_USE_PLL |
+                                             SYSCTL_CFG_VCO_480), 120000000);
+
+
+
+
+
+    // Configure the device pins/IO-Ports
+    // ************************************
+    io_init();
+
+
+    // Configure uart debug port
+    // **************************************
+    UARTStdioConfig(0, 115200, g_ui32SysClock);
+
+    //
+    // Clear the terminal and print a banner.
+    //
+    UARTprintf("\033[2J\033[H");
+    UARTprintf("CoAP API - Mongoose - FreeRTOS\n\n");
+
+
+
+
+    // Configure the hardware MAC address for Ethernet Controller filtering of
+    // incoming packets.  The MAC address will be stored in the non-volatile
+    // USER0 and USER1 registers.
+    // ************************************************************************
+    MAP_FlashUserGet(&ui32User0, &ui32User1);
+    if((ui32User0 == 0xffffffff) || (ui32User1 == 0xffffffff))
+    {
+        //
+        // Let the user know there is no MAC address
+        //
+        UARTprintf("No MAC programmed!\n");
+
+        while(1)
+        {
+        }
+    }
+
+
+    // Convert the 24/24 split MAC address from NV ram into a 32/16 split
+    // MAC address needed to program the hardware registers, then program
+    // the MAC address into the Ethernet Controller registers.
+    // ******************************************************************
+    pui8MACArray[0] = ((ui32User0 >>  0) & 0xff);
+    pui8MACArray[1] = ((ui32User0 >>  8) & 0xff);
+    pui8MACArray[2] = ((ui32User0 >> 16) & 0xff);
+    pui8MACArray[3] = ((ui32User1 >>  0) & 0xff);
+    pui8MACArray[4] = ((ui32User1 >>  8) & 0xff);
+    pui8MACArray[5] = ((ui32User1 >> 16) & 0xff);
+
+
+    // Initialize the lwIP library, using DHCP.
+    lwIPInit(g_ui32SysClock, pui8MACArray, 0, 0, 0, IPADDR_USE_DHCP);
+
+
+
+
+    // Wait for valid IP
+    // while((g_ui32IPAddress == IP_LINK_DOWN) || (g_ui32IPAddress == IP_LINK_UP)){;}
+
+
+    mg_mgr_init(&g_mgr, NULL);
+
+
+
+
+    // Create new task
+    xTaskCreate(vTaskDisplay, (const portCHAR *)"displaytask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+
+    // Create new task
+    xTaskCreate(vTaskMongoose, (const portCHAR *)"mongoosetask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+
+    // Start the created tasks running
+    vTaskStartScheduler();
+
+
+    // Execution should never reach this point as the scheduler is running the tasks
+    // If execution reaches here, then there might be insufficient heap memory for creating the idle task
+    while(1){};
+
+
+
+}
+
+
+//  task
+// *******
+void vTaskDisplay(void *pvParameters)
+{
+    setupTempHardware();
+    sensorOpt3001Setup();
+
+    while(1){
+
+        //TODO: timer + temp
+        // Toggle LED
+        MAP_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, (MAP_GPIOPinRead(LED1_PORT_BASE, LED1_PIN) ^ LED1_PIN));
+
+        io_display(g_ui32IPAddress);
+
+        vTaskDelay( pdMS_TO_TICKS( 500 ) ); // delay 500 milliseconds
+
+                                          // the task is placed into the blocked state for 500 ms
+    }
+}
+
+
+
+void vTaskMongoose(void *pvParameters)
+{
+
+struct mg_connection *nc;
+
+
+    nc =  mg_bind(&g_mgr, s_default_address, ev_handler);              // config the networklayer
+                                                                       // which port should be observed, which handler should be used for events
+    if (nc == NULL) {
+        UARTprintf("Failed to create listener: %s\r\n");
+        while(1){}
+    }
+
+    mg_set_protocol_coap(nc);                                          // set the used protocol on CoAP
+
+
+    while(1){
+
+        mg_mgr_poll(&g_mgr, 0);
+
+        vTaskDelay( pdMS_TO_TICKS( 100 ) ); // delay 100 milliseconds
+                                            // the task is placed into the blocked state for 100 ms
+    }
+}
+
+
