@@ -15,7 +15,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/rom.h"
-#include "driverlib/rom_map.h"      // allows the use of the MAP_ prefix
+#include "driverlib/rom_map.h"
 #include "drivers/pinout.h"
 
 #include "CFAF128128B0145T/CFAF128128B0145T.h"      // Display

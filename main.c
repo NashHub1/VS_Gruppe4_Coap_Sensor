@@ -36,11 +36,9 @@
 #include "userlib/io.h"
 
 /* Helper Functions for RTOS-Tasks and Coap_handler */
-//#include "third_party/coap_handler.h"
 #include "coap_lib/coap_handler.h"
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
-
 
 //-----------------------------------------------------------------------------
 // Variable declarations
@@ -50,7 +48,7 @@ uint32_t g_ui32IPAddress;	// IP address
 
 
 //-----------------------------------------------------------------------------
-//
+//Coap Defaults
 //-----------------------------------------------------------------------------
 
 char *s_default_address = "udp://:5683";
@@ -58,7 +56,11 @@ struct mg_mgr g_mgr;
 
 
 
+//-----------------------------------------------------------------------------
+// Functions
+//-----------------------------------------------------------------------------
 
+/* Neccessary for connection */
 int gettimeofday(struct timeval *tv, void *tzvp) {
   tv->tv_sec = time(NULL);
   tv->tv_usec = 0;
@@ -68,19 +70,14 @@ int gettimeofday(struct timeval *tv, void *tzvp) {
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
-//*****************************************************************************
-// Task declarations
-//*****************************************************************************
+/* Task declarations */
 void vTaskDisplay(void *pvParameters);
 void vTaskMongoose(void *pvParameters);
 
 
-
-//*****************************************************************************
-//
+//-----------------------------------------------------------------------------
 // The error routine that is called if the driver library encounters an error.
-//
-//*****************************************************************************
+//-----------------------------------------------------------------------------
 #ifdef DEBUG
 void
 __error__(char *pcFilename, uint32_t ui32Line)
@@ -88,89 +85,62 @@ __error__(char *pcFilename, uint32_t ui32Line)
 }
 #endif
 
-
-
-
-
 //*****************************************************************************
-//
 // Required by lwIP library to support any host-related timer functions.
 // This function is called in "lwIPServiceTimers()" from the "lwiplib.c" utility
 //   "lwIPServiceTimers()" is called in "lwIPEthernetIntHandler()" from the "lwiplib.c" utility
 //     "lwIPEthernetIntHandler()" is registered in the interrupt vector table (in file "..._startup_ccs.c")
-//
 //*****************************************************************************
 void lwIPHostTimerHandler(void)
 {
     uint32_t ui32NewIPAddress;
 
-    //
     // Get the current IP address.
-    //
     ui32NewIPAddress = lwIPLocalIPAddrGet();
 
-    //
     // See if the IP address has changed.
-    //
     if(ui32NewIPAddress != g_ui32IPAddress)
     {
-        //
         // See if there is an IP address assigned.
-        //
         if(ui32NewIPAddress == 0xffffffff)
         {
-            //
             // Indicate that there is no link.
-            //
             UARTprintf("Waiting for link.\n");
         }
         else if(ui32NewIPAddress == 0)
         {
-            //
             // There is no IP address, so indicate that the DHCP process is
             // running.
-            //
             UARTprintf("Waiting for IP address.\n");
         }
         else
         {
-            //
             // Display the new IP address.
-            //
 			UARTprintf("IP Address: %s\n", ipaddr_ntoa((const ip_addr_t *) &ui32NewIPAddress));
-            //UARTprintf("IP Address: %d.%d.%d.%d\n", ui32NewIPAddress & 0xff, (ui32NewIPAddress >> 8) & 0xff, (ui32NewIPAddress >> 16) & 0xff, (ui32NewIPAddress >> 24) & 0xff);
 
         }
 
-        //
         // Save the new IP address.
-        //
         g_ui32IPAddress = ui32NewIPAddress;
     }
-
 
 }
 
 
 
-//*****************************************************************************
-//
+//-----------------------------------------------------------------------------
 // Main function
-// Simple embedded web server
-//
-//*****************************************************************************
+// Coap Server- Sensor
+//-----------------------------------------------------------------------------
 int main(void)
 {
     uint32_t ui32User0, ui32User1;
     uint8_t pui8MACArray[8];
 
-
-    //
     // Make sure the main oscillator is enabled because this is required by
     // the PHY.  The system must have a 25MHz crystal attached to the OSC
     // pins.  The SYSCTL_MOSC_HIGHFREQ parameter is used when the crystal
     // frequency is 10MHz or higher.
-    //
     SysCtlMOSCConfigSet(SYSCTL_MOSC_HIGHFREQ);
 
     //
