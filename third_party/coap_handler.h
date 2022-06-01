@@ -5,18 +5,10 @@
  *      Author: bboeck
  */
 
-#ifndef COAP_HANDLER_H_
-#define COAP_HANDLER_H_
+#ifndef EVENT_HANDLER_H_
+#define EVENT_HANDLER_H_
 
-#include "third_party/coap_handler.h"
-/* pointer to enum is not valid due datatypes
-typedef enum {
-	"GET",
-	"NOC",
-	"ACK",
-	"RST",
-} uart_msgType;
-*/
+#include "third_party/mongoose.h"
 
 
 #define COAP_CODEDETAIL_GET         1
@@ -36,6 +28,7 @@ typedef enum {
 
 #define COAP_SERVER_URL         "udp://:5683"
 
+
 #define COAP_QUERY_WELLKNOWNCORE    ".well-known/core"
 
 
@@ -54,4 +47,4 @@ void coap_handler(struct mg_connection *nc, int ev, void *ev_data);      // hand
 
 
 
-#endif /* COAP_HANDLER_H_ */
+#endif /* EVENT_HANDLER_H_ */

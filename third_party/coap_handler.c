@@ -1,5 +1,14 @@
+/*
+ * event_handler.c
+ *
+ *  Created on: 26.11.2020
+ *      Author: bboeck
+ */
 
 
+
+
+#include <third_party/coap_handler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,11 +28,13 @@
 #include "utils/uartstdio.h"
 #include "drivers/pinout.h"
 
-#include "CFAF128128B0145T/CFAF128128B0145T.h"
+
+
+#include "CFAF128128B0145T/CFAF128128B0145T.h"      // Display
 
 #include "userlib/io.h"
 
-#include "third_party/coap_handler.h"
+
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
 
@@ -63,9 +74,9 @@ const char *getCodeStr(struct mg_coap_message *cm);
 
 
 // The main event handler.
-void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
+void coap_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
-struct mg_coap_message  *cm = (struct mg_coap_message *) ev_data;      // CoAP message
+	struct mg_coap_message  *cm = (struct mg_coap_message *) ev_data;      // CoAP message
 
     if (ev == MG_EV_POLL){
         return;                                                       // wenn Event Polling
