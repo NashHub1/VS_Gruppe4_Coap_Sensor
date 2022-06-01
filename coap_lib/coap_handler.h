@@ -5,8 +5,8 @@
  *      Author: bboeck
  */
 
-#ifndef EVENT_HANDLER_H_
-#define EVENT_HANDLER_H_
+#ifndef COAP_HANDLER_H_
+#define COAP_HANDLER_H_
 
 #include "third_party/mongoose.h"
 
@@ -23,18 +23,18 @@
 #define COAP_OPTION_ACCEPT              17
 
 
+#define OPTION_URI_PATH	11
+
 #define MAX_PAYLOAD_SIZE        (200)
 
 
 #define COAP_SERVER_URL         "udp://:5683"
 
 
-#define COAP_QUERY_WELLKNOWNCORE    ".well-known/core"
-
-
-#define COAP_QUERY_LIGHT            "light"
-#define COAP_QUERY_TEMP 			"temperature"
-#define COAP_QUERY_LUX				"lux"
+#define DISCOVER_PATH ".well-known/core"
+#define LED_BASEPATH "light"
+#define TMP_BASEPATH "temperature"
+#define LUX_BASEPATH "lux"
 
 
 
