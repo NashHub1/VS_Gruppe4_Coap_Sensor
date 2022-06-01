@@ -24,6 +24,8 @@
 
 #include "io.h"
 
+#include "coap_lib/coap_handler.h"
+
 // The system clock speed.
 extern uint32_t g_ui32SysClock;
 
@@ -56,46 +58,6 @@ void io_init(void)
     return;
 }
 
-
-
-void io_display(uint32_t localIP)
-{
-    char    localStr[22];
-    int     l;
-
-
-    // Titel                          123456789012345678901
-    CFAF128128B0145T_text(0, 20, " CoAP API - Mongoose ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-    CFAF128128B0145T_text(0, 30, "_____________________", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-
-
-    // IP info
-    sprintf(&localStr[0]," %d.%d.%d.%d", localIP & 0xff, (localIP >> 8) & 0xff, (localIP >> 16) & 0xff, (localIP >> 24) & 0xff);
-    l = strlen(&localStr[0]);
-    memset(&localStr[l], ' ', 21-l);    // fill with SPACEs
-    localStr[21] = '\0';                // terminate string
-
-    switch(localIP){
-        case 0xFFFFFFFF:
-            //                            123456789012345678901
-            CFAF128128B0145T_text(0, 40, "Waiting for LINK ... ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-            break;
-
-        case 0:
-            //                            123456789012345678901
-            CFAF128128B0145T_text(0, 40, "Waiting for IP ...   ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-            break;
-
-        default:
-            //                            123456789012345678901
-            CFAF128128B0145T_text(0, 40, "IP-Address:        ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-            CFAF128128B0145T_text(0, 50, localStr, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-            break;
-    }
-
-
-    return;
-}
 
 
 int io_rgbLedInit(void)
