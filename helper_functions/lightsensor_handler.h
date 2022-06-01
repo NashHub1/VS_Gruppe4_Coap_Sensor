@@ -1,50 +1,50 @@
 /*
- * lightsensor_handler.h
+ * event_handler.h
  *
- *  Created on: 30.05.2022
- *      Author: David Nguyen
+ *  Created on: 7.12.2021
+ *      Author: bboeck
  */
 
-#ifndef HELPER_FUNCTIONS_LIGHTSENSOR_HANDLER_H_
-#define HELPER_FUNCTIONS_LIGHTSENSOR_HANDLER_H_
+#ifndef COAP_HANDLER_H_
+#define COAP_HANDLER_H_
 
-//*****************************************************************************
-// Macro Defines for opt3001 bit fields
-//*****************************************************************************
-
-/* Slave address */
-#define OPT3001_I2C_ADDRESS				0x44		// Datasheet P.22
-#define I2C_DEVICE              		I2C2_BASE	// I2C0..C4
-
-/* Register addresses */
-#define REG_RESULT                      0x00		// 16Bit-Register
-#define REG_CONFIGURATION               0x01
-#define REG_LOW_LIMIT                   0x02
-#define REG_HIGH_LIMIT                  0x03
-/* Identify the device */
-#define REG_MANUFACTURER_ID             0x7E		// Manufacturer ID: 5449h
-#define REG_DEVICE_ID                   0x7F		// Device ID: 		3001h
-
-/* Register values */
-#define CONFIG_RESET                    0xC810
-#define CONFIG_ENABLE                   0xCC10		// Scale: 40.95 | Continous
-
-/* Bit values */
-#define DATA_RDY_BIT                    0x0080  	// Data ready
+#include "third_party/mongoose.h"
 
 
-//*****************************************************************************
-// Event-Handler
-//*****************************************************************************
+#define COAP_CODEDETAIL_GET         1
+#define COAP_CODEDETAIL_POST        2
+#define COAP_CODEDETAIL_PUT         3
+#define COAP_CODEDETAIL_DELETE      4
+#define COAP_CODEDETAIL_CONTENT     5
 
-// Initialize Configuration for OPT3001 Sensor
-void sensorOpt3001Setup(void);
+#define COAP_OPTION_ETAG                4
+#define COAP_OPTION_URIPATH             11
+#define COAP_OPTION_CONTENTFORMAT       12
+#define COAP_OPTION_ACCEPT              17
 
-// I2C - Event Handler
-void WriteI2CRegister(uint8_t i2cAdress, uint8_t registerName, uint16_t value);
-uint16_t ReadI2CRegister(uint8_t i2cAdress, uint8_t registerName);
 
-// Get-Sensor-Data
-void sensorOpt3001Read(float *lux_val);
+#define OPTION_URI_PATH	11
 
-#endif /* HELPER_FUNCTIONS_LIGHTSENSOR_HANDLER_H_ */
+#define MAX_PAYLOAD_SIZE        (200)
+
+
+#define COAP_SERVER_URL         "udp://:5683"
+
+
+#define DISCOVER_PATH ".well-known/core"
+#define LED_BASEPATH "light"
+#define TMP_BASEPATH "temperature"
+#define LUX_BASEPATH "lux"
+
+
+
+
+
+
+// Mongoose event handler
+void coap_handler(struct mg_connection *nc, int ev, void *ev_data);      // handler where all the network interrupts are handled
+
+
+
+
+#endif /* EVENT_HANDLER_H_ */
