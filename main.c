@@ -40,6 +40,7 @@
 #include "coap_lib/coap_handler.h"
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
+#include "helper_functions/display_handler.h"
 
 //-----------------------------------------------------------------------------
 // Variable declarations
@@ -72,8 +73,8 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
 /* Task declarations */
-void vTaskDisplay(void *pvParameters);
-void vTaskMongoose(void *pvParameters);
+void DisplayTask(void *pvParameters);
+void CoapTask(void *pvParameters);
 
 
 //-----------------------------------------------------------------------------
@@ -217,9 +218,9 @@ int main(void)
 
     mg_mgr_init(&g_mgr, NULL);
 
-    // Create new task
-    xTaskCreate(vTaskDisplay, (const portCHAR *)"displaytask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-    xTaskCreate(vTaskMongoose, (const portCHAR *)"mongoosetask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
+    // Create new task | Stack = (uint16_t)1024 (minimal stack size)
+    xTaskCreate(DisplayTask, (const portCHAR *)"displaytask", 1024, NULL, 1, NULL);
+    xTaskCreate(CoapTask, (const portCHAR *)"mongoosetask", 1024, NULL, 1, NULL);
 
     // Start the created tasks running
     vTaskStartScheduler();
@@ -237,20 +238,23 @@ int main(void)
 // Function: Tasks are blocked with different delays. Thereby, they run through
 // a continuous loop, which allows the parallel execution of the two tasks.
 //*****************************************************************************
-void vTaskDisplay(void *pvParameters)
+void DisplayTask(void *pvParameters)
 {
     setupTempHardware();
     sensorOpt3001Setup();
+    setup_display();
+    vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 800 milliseconds
+
 
     while(1){
 
         //TODO: timer + temp
         // Toggle LED
         //MAP_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, (MAP_GPIOPinRead(LED1_PORT_BASE, LED1_PIN) ^ LED1_PIN));
+    	display_drawer(g_ui32IPAddress);
+        //io_display(g_ui32IPAddress);
 
-        io_display(g_ui32IPAddress);
-
-        vTaskDelay( pdMS_TO_TICKS( 500 ) ); // delay 500 milliseconds
+        vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 500 milliseconds
 
                                           // the task is placed into the blocked state for 500 ms
     }
@@ -258,7 +262,7 @@ void vTaskDisplay(void *pvParameters)
 
 
 
-void vTaskMongoose(void *pvParameters)
+void CoapTask(void *pvParameters)
 {
 	struct mg_connection *nc;
     nc =  mg_bind(&g_mgr, s_default_address, coap_handler);
