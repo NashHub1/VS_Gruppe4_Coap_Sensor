@@ -1,9 +1,15 @@
-/*
- * main.c
- *
- *  Created on: 20.04.2022
- *      Author: David Nguyen
- */
+//*****************************************************************************
+// Authors:     David Nguyen | Michael Stephens
+// Group 4:     CoAP Server - Sensor
+// Course:		Distributed Systems by Prof. Dr. Boris Boeck
+//
+// License:
+// --------
+// Copyright (c) 2014-2016 Cesanta Software Limited
+// All rights reserved
+//
+//
+//*****************************************************************************
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -28,17 +34,13 @@
 
 /* User-Libaries */
 #include "userlib/io.h"
-#include "userlib/timerIntCtrl.h"
+//#include "userlib/timerIntCtrl.h"
 
 /* Helper Functions for RTOS-Tasks */
 #include "third_party/coap_handler.h"
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
 
-// Timeout for DHCP address request (in seconds).
-#ifndef DHCP_EXPIRE_TIMER_SECS
-#define DHCP_EXPIRE_TIMER_SECS  45
-#endif
 
 //*****************************************************************************
 // Variable declarations
