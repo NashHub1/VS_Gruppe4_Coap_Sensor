@@ -170,9 +170,6 @@ int io_buttonGetState(void);
 
 
 
-float io_temperatureGet(void);
-
-
 
 #ifdef __cplusplus
 }

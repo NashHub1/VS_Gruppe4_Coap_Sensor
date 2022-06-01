@@ -1,10 +1,9 @@
-//*****************************************************************************
-//
-// REST API - basic
-//
-//
-//*****************************************************************************
-#include <event_handler.h>
+/*
+ * main.c
+ *
+ *  Created on: 20.04.2022
+ *      Author: David Nguyen
+ */
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
@@ -21,51 +20,33 @@
 #include "driverlib/systick.h"
 #include "driverlib/timer.h"
 #include "driverlib/rom_map.h"
-
 #include "utils/uartstdio.h"
 
-#include "third_party/mongoose/mongoose.h"   // this include has to be before the include of "utils/lwiplib.h" !!!!!
+#include "third_party/mongoose.h"
 #include "utils/lwiplib.h"
 
 
-
-
+/* User-Libaries */
 #include "userlib/io.h"
 #include "userlib/timerIntCtrl.h"
 
-
+/* Helper Functions for RTOS-Tasks */
+#include "third_party/coap_handler.h"
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
-
-
-
 
 // Timeout for DHCP address request (in seconds).
 #ifndef DHCP_EXPIRE_TIMER_SECS
 #define DHCP_EXPIRE_TIMER_SECS  45
 #endif
 
+//*****************************************************************************
+// Variable declarations
+//*****************************************************************************
+uint32_t g_ui32SysClock;	// system clock frequency
+uint32_t g_ui32IPAddress;	// IP address
 
-
-// Special IP address values that lwiplib uses.
-#define IP_LINK_DOWN (0xffffffffU)
-#define IP_LINK_UP (0)
-
-
-
-
-
-
-// The current IP address.
-uint32_t g_ui32IPAddress;
-
-
-// The system clock frequency.
-uint32_t g_ui32SysClock;
-
-
-char *s_default_address = COAP_SERVER_URL;                             // default adress set to udp port 5683
-
+char *s_default_address = "udp://:5683";
 struct mg_mgr g_mgr;
 
 
@@ -80,19 +61,10 @@ int gettimeofday(struct timeval *tv, void *tzvp) {
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
-
-
-
 //*****************************************************************************
-//
-// External Application references.
-//
-//*****************************************************************************
-
-
 // Task declarations
+//*****************************************************************************
 void vTaskDisplay(void *pvParameters);
-
 void vTaskMongoose(void *pvParameters);
 
 
@@ -138,14 +110,14 @@ void lwIPHostTimerHandler(void)
         //
         // See if there is an IP address assigned.
         //
-        if(ui32NewIPAddress == IP_LINK_DOWN)
+        if(ui32NewIPAddress == 0xffffffff)
         {
             //
             // Indicate that there is no link.
             //
             UARTprintf("Waiting for link.\n");
         }
-        else if(ui32NewIPAddress == IP_LINK_UP)
+        else if(ui32NewIPAddress == 0)
         {
             //
             // There is no IP address, so indicate that the DHCP process is
@@ -206,20 +178,19 @@ int main(void)
 
 
 
-    // Configure the device pins/IO-Ports
-    // ************************************
+    // GP-/IO Pin Configuration
     io_init();
 
 
-    // Configure uart debug port
-    // **************************************
+
+    // debug terminal
     UARTStdioConfig(0, 115200, g_ui32SysClock);
 
-    //
-    // Clear the terminal and print a banner.
-    //
+    // clear terminal and print title
     UARTprintf("\033[2J\033[H");
-    UARTprintf("CoAP API - Mongoose - FreeRTOS\n\n");
+    UARTprintf("===================================\n");
+    UARTprintf("CoAP - Server & Sensor - Gruppe 4\n");
+    UARTprintf("===================================\n\n");
 
 
 
@@ -261,18 +232,15 @@ int main(void)
 
 
     // Wait for valid IP
-    // while((g_ui32IPAddress == IP_LINK_DOWN) || (g_ui32IPAddress == IP_LINK_UP)){;}
+    //while((g_ui32IPAddress == 0) || (g_ui32IPAddress == 0xffffffff)){};
+    //SysCtlDelay(10000);
+
 
 
     mg_mgr_init(&g_mgr, NULL);
 
-
-
-
     // Create new task
     xTaskCreate(vTaskDisplay, (const portCHAR *)"displaytask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
-
-    // Create new task
     xTaskCreate(vTaskMongoose, (const portCHAR *)"mongoosetask", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
     // Start the created tasks running
@@ -287,9 +255,10 @@ int main(void)
 
 }
 
-
-//  task
-// *******
+//*****************************************************************************
+// Function: Tasks are blocked with different delays. Thereby, they run through
+// a continuous loop, which allows the parallel execution of the two tasks.
+//*****************************************************************************
 void vTaskDisplay(void *pvParameters)
 {
     setupTempHardware();
@@ -299,7 +268,7 @@ void vTaskDisplay(void *pvParameters)
 
         //TODO: timer + temp
         // Toggle LED
-        MAP_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, (MAP_GPIOPinRead(LED1_PORT_BASE, LED1_PIN) ^ LED1_PIN));
+        //MAP_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, (MAP_GPIOPinRead(LED1_PORT_BASE, LED1_PIN) ^ LED1_PIN));
 
         io_display(g_ui32IPAddress);
 
@@ -313,24 +282,21 @@ void vTaskDisplay(void *pvParameters)
 
 void vTaskMongoose(void *pvParameters)
 {
+	struct mg_connection *nc;
+    nc =  mg_bind(&g_mgr, s_default_address, coap_handler);
 
-struct mg_connection *nc;
-
-
-    nc =  mg_bind(&g_mgr, s_default_address, ev_handler);              // config the networklayer
-                                                                       // which port should be observed, which handler should be used for events
     if (nc == NULL) {
         UARTprintf("Failed to create listener: %s\r\n");
         while(1){}
     }
 
-    mg_set_protocol_coap(nc);                                          // set the used protocol on CoAP
+    // Set CoAP-Protocoll
+    mg_set_protocol_coap(nc);
 
 
     while(1){
 
         mg_mgr_poll(&g_mgr, 0);
-
         vTaskDelay( pdMS_TO_TICKS( 100 ) ); // delay 100 milliseconds
                                             // the task is placed into the blocked state for 100 ms
     }

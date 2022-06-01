@@ -27,7 +27,7 @@
 
 /* Register values */
 #define CONFIG_RESET                    0xC810
-#define CONFIG_ENABLE                   0x0C10		// Scale: 40.95 | Continous
+#define CONFIG_ENABLE                   0xCC10		// Scale: 40.95 | Continous
 
 /* Bit values */
 #define DATA_RDY_BIT                    0x0080  	// Data ready

@@ -265,17 +265,3 @@ int io_buttonGetState(void)
 }
 
 
-
-float io_temperatureGet(void)
-{
-int32_t                 temp;
-float                   tempFloat;
-
-    // Simulated temperature reading
-    temp = 200+rand()%100;       // randomPart = 0...9
-    tempFloat = temp;
-    tempFloat = tempFloat/10;
-    return(tempFloat);
-
-}
-

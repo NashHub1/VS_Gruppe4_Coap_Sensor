@@ -1,19 +1,10 @@
-/*
- * event_handler.c
- *
- *  Created on: 26.11.2020
- *      Author: bboeck
- */
 
 
-
-
-#include <event_handler.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
-#include "third_party/mongoose/mongoose.h"
+#include "third_party/mongoose.h"
 #include "third_party/mjson/mjson.h"
 
 #include "inc/hw_ints.h"
@@ -28,13 +19,11 @@
 #include "utils/uartstdio.h"
 #include "drivers/pinout.h"
 
-
-
-#include "CFAF128128B0145T/CFAF128128B0145T.h"      // Display
+#include "CFAF128128B0145T/CFAF128128B0145T.h"
 
 #include "userlib/io.h"
 
-
+#include "third_party/coap_handler.h"
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
 
@@ -52,13 +41,13 @@ const char *coapResponseCodeServerErrStrings[]  = {"ServErr", "ServErr", "ServEr
 // Global Variables
 
 uint16_t    localMessageID=0;
-
+char *pBuffer;
 
 
 
 // Static funtions
 // Prototypes (static functions)
-void coapProcessMessage(struct mg_connection *nc, struct mg_coap_message *cm);
+void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm);
 
 static void coapPrintMessageDetails(struct mg_coap_message *cm);
 
@@ -73,66 +62,36 @@ const char *getCodeStr(struct mg_coap_message *cm);
 
 
 
-// The main event handler.
-void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
-struct mg_coap_message  *cm = (struct mg_coap_message *) ev_data;      // CoAP message
+//*****************************************************************************
+// Event-Handler for CoAP Request
+//*****************************************************************************
+void coap_handler(struct mg_connection *nc, int ev, void *p) {
 
-    if (ev == MG_EV_POLL){
-        return;                                                       // wenn Event Polling
-    }
-    else{
-        //UARTprintf("USER HANDLER GOT EVENT %d\r\n", ev);
+	// TODO: polling result going through --> switch case! return? blocked?
+	// TODO: how to secure connection? dtls??? - alternatively with COAP_CON?
 
-        switch (ev) {
+	struct mg_coap_message  *cm = (struct mg_coap_message *) p;
+	switch (ev) {
+		case MG_EV_COAP_CON:       // CoAP CON received
+			UARTprintf("CON received\n");//, cm->msg_id);
+			// check if request
+			coapMessage_handler(nc, cm);
+			break;
 
-            case MG_EV_ACCEPT: {    // 1 : New connection accepted. union socket_address *
-                char addr[32];
-                    mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr), MG_SOCK_STRINGIFY_IP | MG_SOCK_STRINGIFY_PORT);
-                    UARTprintf("%p: Connection from %s\r\n", nc, addr);
-                }
-                break;
+		case MG_EV_COAP_NOC:{
+			UARTprintf("NOC received\n"); //, cm->msg_id);
+			coapMessage_handler(nc, cm);
+			break;
+		}
 
-            case MG_EV_RECV:        // 3  : Data has been received. int *num_bytes
-                UARTprintf("%p: Data has been received\r\n", nc);
-                break;
-
-            case MG_EV_SEND:        // 4  : Data has been written to a socket. int *num_bytes
-                UARTprintf("%p: Data has been sent\r\n", nc);
-                break;
-
-            case MG_EV_CLOSE:       // 5   : Connection is closed. NULL
-                UARTprintf("%p: Connection closed\r\n", nc);
-                break;
-
-
-            case MG_EV_COAP_CON:       // CoAP CON received
-                UARTprintf("CoAP CON received:\n");
-                coapProcessMessage(nc, cm);
-                break;
-
-            case MG_EV_COAP_NOC:
-                UARTprintf("CoAP NON received:\n");
-                coapProcessMessage(nc, cm);
-                break;
-
-            case MG_EV_COAP_ACK:
-                UARTprintf("CoAP ACK received for message with msg_id = %d\n", cm->msg_id);
-                break;
-
-            case MG_EV_COAP_RST:
-                UARTprintf("CoAP RST received with msg_id = %d received\n", cm->msg_id);
-                break;
-
-
-            default:
-                UARTprintf("Event handler got event: %d\r\n", ev);
-                break;
-
-          }
-
-      }
-
+		case MG_EV_COAP_ACK:
+		case MG_EV_COAP_RST: {
+		  struct mg_coap_message *cm = (struct mg_coap_message *) p;
+		  printf("ACK/RST/NOC with msg_id = %d received\n", cm->msg_id);
+		  break;
+		}
+	}
 }
 
 
@@ -177,23 +136,16 @@ const char *getCodeStr(struct mg_coap_message *cm)
 
 
 
-void coapProcessMessage(struct mg_connection *nc, struct mg_coap_message *cm)
+
+void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 {
     uint32_t                res;
-
     struct mg_coap_message  coap_message;       // New message (for reply)
-
     char                    err = 0;
-
     char                    URIPath[50];
-
-
     struct mg_str           load_buffer;          // (string) buffer (pointer to memory + length)
     char                    payload_buffer[MAX_PAYLOAD_SIZE];
-
     char                    content_format_option = 0;         // plain text
-
-
 
     coapPrintMessageDetails(cm);
 
@@ -222,6 +174,7 @@ void coapProcessMessage(struct mg_connection *nc, struct mg_coap_message *cm)
                 //                       1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890
                 //sprintf(payload_buffer, "</temperature>;rt=\"temperature-c\";title =\"Temperature in the system\";</test>;title=\"name\"");
                 sprintf(payload_buffer, "</temperature>;rt=\"temperature-c\";title=\"Temperature in the system\";</light>;title=\"light\";</lux>;title =\"lux\"");
+                sprintf(pBuffer, "</temperature>;rt=\"temperature-c\";title=\"Temperature in the system\";</light>;title=\"light\";</lux>;title =\"lux\"");
                 //sprintf(payload_buffer, "</light>;title =\"light\"");
 
 
@@ -277,6 +230,8 @@ void coapProcessMessage(struct mg_connection *nc, struct mg_coap_message *cm)
 
                 load_buffer.p   = &payload_buffer[0];
                 load_buffer.len = strlen(&payload_buffer[0]);
+                coap_message.payload    = load_buffer;
+                load_buffer.len = strlen(&pBuffer[0]);
                 coap_message.payload    = load_buffer;
 
                 // Add Option content format, if required
@@ -380,36 +335,38 @@ void coapProcessMessage(struct mg_connection *nc, struct mg_coap_message *cm)
 
 static void coapPrintMessageDetails(struct mg_coap_message *cm)
 {
-char                  localStr[MAX_PAYLOAD_SIZE];
-int                   value;
-struct mg_coap_option *pOption;
-int                     i;
+	char                  localStr[MAX_PAYLOAD_SIZE];
+	int                   value;
+	struct mg_coap_option *pOption;
+	int                     i;
 
-    // Print message details to UART
-    // *****************************
+	 /* Display CoAP-Message */
 
-    UARTprintf("  Type|Code|ID|Token:  ");
-    UARTprintf(" %1d(%s)|",    cm->msg_type, coapTypeStrings[cm->msg_type]);
-    sprintf(&localStr[0], "%d.%2.2d,%s|",cm->code_class, cm->code_detail, getCodeStr(cm));
-    UARTprintf(&localStr[0]);
-    UARTprintf(" %5d|",    cm->msg_id);
-    // Token
-    if(cm->token.len > 0){
-        UARTprintf("0x");
-        for(i=0; i<cm->token.len; i++){
-            value = *((uint8_t *)(cm->token.p)+i);
-            sprintf(&localStr[2*i], "%2.2x", value);
-        }
-        UARTprintf("%s",localStr);
+
+
+	/* [Header]
+	-----------------------------------------------------------------
+	| Message-Types: Type | Name (not included fot the moment)		|
+	-----------------------------------------------------------------*/
+    UARTprintf("\n\n[Header] | %d | ", cm->msg_type);
+    // Response-Codes X.YY - X = Class, YY = Details
+    UARTprintf("%d.0%d | ", cm->code_class, cm->code_detail);
+    // Message ID
+    UARTprintf("%d |", cm->msg_id);
+
+
+    /* Payload */
+    UARTprintf("\nPayload: ");
+
+    // store payload
+    if (cm->payload.p != NULL)
+    {
+    	// create pointer for payload with size of payload
+    	pBuffer = calloc(cm->payload.len + 1, sizeof(char));
+    	memcpy(pBuffer,cm->payload.p,cm->payload.len);
     }
-    UARTprintf("\r\n");
-
-
-
-    UARTprintf("  Payload:       ");
-    memcpy(&localStr[0], cm->payload.p, cm->payload.len);
-    localStr[cm->payload.len] = '\0';
-    UARTprintf("  %s\n\r",   &localStr[0]);
+    // set Null for terminate array for printing payload
+    UARTprintf("%s\n", &pBuffer[0]);
 
     UARTprintf("  Options:   ");
     pOption = cm->options;

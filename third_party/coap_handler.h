@@ -5,10 +5,18 @@
  *      Author: bboeck
  */
 
-#ifndef EVENT_HANDLER_H_
-#define EVENT_HANDLER_H_
+#ifndef COAP_HANDLER_H_
+#define COAP_HANDLER_H_
 
-#include "third_party/mongoose/mongoose.h"
+#include "third_party/coap_handler.h"
+/* pointer to enum is not valid due datatypes
+typedef enum {
+	"GET",
+	"NOC",
+	"ACK",
+	"RST",
+} uart_msgType;
+*/
 
 
 #define COAP_CODEDETAIL_GET         1
@@ -28,7 +36,6 @@
 
 #define COAP_SERVER_URL         "udp://:5683"
 
-
 #define COAP_QUERY_WELLKNOWNCORE    ".well-known/core"
 
 
@@ -42,9 +49,9 @@
 
 
 // Mongoose event handler
-void ev_handler(struct mg_connection *nc, int ev, void *ev_data);      // handler where all the network interrupts are handled
+void coap_handler(struct mg_connection *nc, int ev, void *ev_data);      // handler where all the network interrupts are handled
 
 
 
 
-#endif /* EVENT_HANDLER_H_ */
+#endif /* COAP_HANDLER_H_ */
