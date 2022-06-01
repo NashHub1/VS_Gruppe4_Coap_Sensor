@@ -3,11 +3,12 @@
 // Group 4:     CoAP Server - Sensor
 // Course:		Distributed Systems by Prof. Dr. Boris Boeck
 //
+// Main.c
+//
 // License:
 // --------
 // Copyright (c) 2014-2016 Cesanta Software Limited
 // All rights reserved
-//
 //
 //*****************************************************************************
 #include <stdbool.h>

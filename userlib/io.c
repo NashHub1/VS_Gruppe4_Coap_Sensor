@@ -1,7 +1,9 @@
 //*****************************************************************************
+// Authors:     David Nguyen | Michael Stephens
+// Group 4:     CoAP Server - Sensor
+// Course:		Distributed Systems by Prof. Dr. Boris Boeck
 //
-// io.c - I/O routines
-//
+// io.c  I/O Routine
 //*****************************************************************************
 #include <stdbool.h>
 #include <stdint.h>
@@ -29,42 +31,19 @@ extern uint32_t g_ui32SysClock;
 
 int     io_ledState;
 char    textData[TEXT_MAX_NB_OF_TEXTES][TEXT_MAX_NB_OF_CHARS+1];
-rgb_t   rgbLED;
+
 
 
 //*****************************************************************************
-//
-// Initialize IO
-//
+// Initialize IO ( Display, RGB )
 //*****************************************************************************
 void io_init(void)
 {
-    rgb_t rgbLocal;
 
+    PinoutSet(true, false); // LED D3 and D4 for Ethernet connection
 
-    PinoutSet(true, false);
-
-    // Enable peripherals:
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPION);        // enable GPIO Port N (LED1, LED2)
-
-    // Check if the peripheral access is enabled. (Wait for GPIOx module to become ready)
-    while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION)){ }
-
-
-    // Set pin LED1_PIN at port LED1_PORT_BASE as output, SW controlled.
-    ROM_GPIOPinTypeGPIOOutput(LED1_PORT_BASE, LED1_PIN);
-
-    // switch LED off (0)
-    ROM_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, 0);
-
-    // Set pin LED2_PIN at port LED2_PORT_BASE as output, SW controlled.
-    ROM_GPIOPinTypeGPIOOutput(LED2_PORT_BASE, LED2_PIN);
-
-    // switch LED off (0)
-    ROM_GPIOPinWrite(LED2_PORT_BASE, LED2_PIN, 0);
-
-
-
+    // Initialize Display module
+    CFAF128128B0145T_init(BOOSTER_PACK_POSITION, g_ui32SysClock, 20000000);
 
 
     io_buttonInit();
@@ -72,29 +51,6 @@ void io_init(void)
     io_rgbLedInit();
 
 
-    // Display
-    // *******
-    // Init Display module
-    CFAF128128B0145T_init(BOOSTER_PACK_POSITION, g_ui32SysClock, 20000000);
-
-
-
-
-    // Initialize Dummy I/Os
-
-
-
-    // texts
-    io_textSet(0, "Max");         // first name
-    io_textSet(1, "Mustermann");  // last name
-    io_textSet(2, "Tescht");      // userstring
-
-
-    // RGB LED
-    rgbLocal.r = 255;
-    rgbLocal.g = 255;
-    rgbLocal.b = 255;
-    io_ledRGBSet(rgbLocal);
     io_ledSetState(0);
 
     return;
@@ -144,14 +100,8 @@ void io_display(uint32_t localIP)
 
 int io_rgbLedInit(void)
 {
-    // Enable peripherals:
-    RGB_ENABLE_PERIPHERAL();
-
-
-    // Check if the peripheral access is enabled. (Wait for GPIOx module to become ready)
-    //while(!SysCtlPeripheralReady(SYSCTL_PERIPH_GPION)){ }
-
-
+    // Enable peripherals
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOK||SYSCTL_PERIPH_GPIOM);
     // Set pin LED1_PIN at port LED1_PORT_BASE as output, SW controlled.
     ROM_GPIOPinTypeGPIOOutput(RGB_R_PORT_BASE, RGB_R_PIN);
     ROM_GPIOPinTypeGPIOOutput(RGB_G_PORT_BASE, RGB_G_PIN);
@@ -162,7 +112,7 @@ int io_rgbLedInit(void)
     ROM_GPIOPinWrite(RGB_G_PORT_BASE, RGB_G_PIN, 0);
     ROM_GPIOPinWrite(RGB_B_PORT_BASE, RGB_B_PIN, 0);
 
-    return(1);  // success
+    return(1);
 }
 
 
@@ -217,23 +167,6 @@ void io_textSet(int textID, char *pText)
     if(textID < TEXT_MAX_NB_OF_TEXTES){
         strcpy(&textData[textID][0], pText);
     }
-    return;
-}
-
-
-
-rgb_t io_ledRGBGet(void)
-{
-    return(rgbLED);
-}
-
-
-void io_ledRGBSet(rgb_t rgbValue)
-{
-    rgbLED = rgbValue;
-
-    // Hardware control not yet implemented
-
     return;
 }
 
