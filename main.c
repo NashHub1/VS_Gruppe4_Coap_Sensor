@@ -34,19 +34,24 @@
 
 /* User-Libaries */
 #include "userlib/io.h"
-//#include "userlib/timerIntCtrl.h"
 
-/* Helper Functions for RTOS-Tasks */
-#include "third_party/coap_handler.h"
+/* Helper Functions for RTOS-Tasks and Coap_handler */
+//#include "third_party/coap_handler.h"
+#include "coap_lib/coap_handler.h"
 #include "helper_functions/temperature_handler.h"
 #include "helper_functions/lightsensor_handler.h"
 
 
-//*****************************************************************************
+//-----------------------------------------------------------------------------
 // Variable declarations
-//*****************************************************************************
+//-----------------------------------------------------------------------------
 uint32_t g_ui32SysClock;	// system clock frequency
 uint32_t g_ui32IPAddress;	// IP address
+
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
 
 char *s_default_address = "udp://:5683";
 struct mg_mgr g_mgr;
