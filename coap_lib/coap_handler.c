@@ -242,27 +242,14 @@ static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, 
      * - title
      *--------------------------------------------------------------------*/
     char* cont_text =
-/*
-    		"</temperature>;"
-    			"rt=\"temperature-c\";"
-    			"title=\"Temperature in the system\";"
 
-    		"</light>;"
-    			"title=\"light\";"
-
-    		"</lux>;"
-    			"title =\"lux\"";
-    */
 			"</temperature>;"
     		    "title=\"Temperature in the system\";"
     			"rt=\"temperature-c\";"
 
     		"</light>;"
     			"title=\"luminous value\";"
-    			"rt=\"light-lux\"";
-    		/*
-    		"</lux>;"
-    			"title =\"lux\"";*/
+    			"rt=\"light-lux\"";//
 
     coap_message.payload.p 		= cont_text;
     coap_message.payload.len	= strlen(cont_text);
@@ -346,7 +333,7 @@ static void mg_coap_send_by_lux(struct mg_connection *nc, uint16_t msg_id, struc
 	}
 	coap_message.token      	= token;                    	// Token == Request Token
 	coap_message.code_class 	= MG_COAP_CODECLASS_RESP_OK;    // 2.05
-	coap_message.code_detail 	= detail; // abruf
+	coap_message.code_detail 	= detail; 						// abruf
 
 	// Content-Formats = TODO: extra methode
 	char *ctOpt = 0;
