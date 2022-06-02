@@ -98,6 +98,7 @@ void coap_handler(struct mg_connection *nc, int ev, void *p) {
 void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 {
 	uint32_t res;
+	char default_format = 0;
 
 	struct mg_coap_message coap_message;
 	memset(&coap_message, 0, sizeof(coap_message));
@@ -135,15 +136,16 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 			struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
 
 			float vTemp; // Issue with global variable...
-			char tempBuffer[40];
+			char tempBuffer[100];
 			vTemp = getTemperature();
 
-			if (ctOpt == 0){
-
+			if (&ctOpt == 0){
 
 				sprintf(tempBuffer,"Temperatur: %0.2f %cC", vTemp, 176); // ascii for degree
 
+			}else if (&ctOpt == 50){
 
+				sprintf(tempBuffer, " { Temperature: %0.2f }", vTemp);
 
 			}
 			coap_message.payload.p 			= &tempBuffer[0];
@@ -168,18 +170,22 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 			coap_message.code_class 		= MG_COAP_CODECLASS_RESP_OK;    	// 2.05
 			coap_message.code_detail 		= 5;
 
-			char *ctOpt = getAcceptFormat(cm);
+			char *ctOpt = getAcceptFormat(cm);;
 
 			// Add new option 12 (content format) :
 			struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
 
-			char luxBuffer[40];
+			char luxBuffer[100];
 
-			if (ctOpt == FORMAT_PLAIN){ // if
+			if (ctOpt == FORMAT_PLAIN){
 
 				sprintf(luxBuffer,"Brightness: %5.2f", LuxSensorValue); // brighness value
 
-			}
+			}/*else if (accFormat == FORMAT_JSON){
+
+				sprintf(luxBuffer, "{ Brightness: %5.2f }", LuxSensorValue);
+
+			}*/
 
 			///=============================================================================
 			/// LabTask: JSON-Format
@@ -329,17 +335,22 @@ uint16_t getAcceptFormat(struct mg_coap_message *cm){
 	struct mg_coap_option *opt = (struct mg_coap_option *) cm->options->next;
 	struct mg_str val = (struct mg_str) opt->value;
 
-	if(opt->number == OPTION_CONTENT_FORMAT){		// Option 17 (for client) format request
+	if(opt->number == OPTION_ACCEPT){					// Option 17 (for client) format request
 		///******************************
-		if(*(val.p) == FORMAT_DUMMY){
-			return FORMAT_DUMMY;
+		if(*(val.p) == 50){
+			return 50;
 		///******************************
-		}else if(*(val.p) == FORMAT_PLAIN){			// Format 0
+		}else if(*(val.p) == 0){					// Format 0
+			return 0;
+		}
+	}else if (opt->number == OPTION_CONTENT_FORMAT){	// Option 12 for payload
+		if(*(val.p) == 50){
+			return 50;
+		}else if(*(val.p) == 0){				// Format 0
 			return 0;
 		}
 	}
 	// No Accept Format
-	return NULL;
 }
 
 
