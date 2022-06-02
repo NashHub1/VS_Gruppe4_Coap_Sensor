@@ -39,49 +39,43 @@ void ioDisplaySetup(void){
     CFAF128128B0145T_rectangle(3,0,125,30, CFAF128128B0145T_color_white);
 
     // Constant Strings
-    CFAF128128B0145T_text(5, 70, "Brightness:        ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
+    CFAF128128B0145T_text(5, 40, "IP-Address:", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
+    CFAF128128B0145T_text(5, 70, "Brightness:", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
     CFAF128128B0145T_text(10, 80, " --- ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-    CFAF128128B0145T_text(5, 100, "Temperature:       ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
+    CFAF128128B0145T_text(5, 100, "Temperature: ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
 	CFAF128128B0145T_text(10, 110, " --- ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
 }
 
 
 void ioDisplayUpdate(uint32_t localIP)
 {
-    char    localStr[22];
-    int     l;
+    char    ipBuffer[21];
+    int     len;
 
     // IP info
-    sprintf(&localStr[0]," %d.%d.%d.%d", localIP & 0xff, (localIP >> 8) & 0xff, (localIP >> 16) & 0xff, (localIP >> 24) & 0xff);
-    l = strlen(&localStr[0]);
-    memset(&localStr[l], ' ', 21-l);    // fill with SPACEs
-    localStr[21] = '\0';                // terminate string
+    sprintf(&ipBuffer[0]," %d.%d.%d.%d\0", localIP & 0xff, (localIP >> 8) & 0xff, (localIP >> 16) & 0xff, (localIP >> 24) & 0xff);
+    len = strlen(&ipBuffer[0]);
+    memset(&ipBuffer[len], ' ', 20-len);
+    ipBuffer[21] = '\0'; // Null-Terminate
 
 	update_opt3001();
 	update_tmp600();
 
+	// TODO: offline?
     switch(localIP){
         case 0xFFFFFFFF:
-            //                            123456789012345678901
-            CFAF128128B0145T_text(5, 40, "Waiting for LINK ... ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
+            CFAF128128B0145T_text(10, 50, " Waiting for LINK", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
             break;
 
         case 0:
-            //                            123456789012345678901
-            CFAF128128B0145T_text(5, 40, "Waiting for IP ...   ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
+            CFAF128128B0145T_text(10, 50, " Waiting for IP", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
             break;
 
         default:
-
-            //                            123456789012345678901
-            CFAF128128B0145T_text(5, 40, "IP-Address:        ", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-            CFAF128128B0145T_text(10, 50, localStr, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-
-
-            CFAF128128B0145T_text(10, 80, luxBuffer, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
-
-
-            CFAF128128B0145T_text(10, 110, tempBuffer, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
+        	// Note print same or more chracters for IP, otherwise not overwrite!
+            CFAF128128B0145T_text(10, 50, ipBuffer, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);		// IP
+            CFAF128128B0145T_text(10, 80, luxBuffer, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);		// Brightness
+            CFAF128128B0145T_text(10, 110, tempBuffer, CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);	// Temperature (internal)
             break;
     }
 
@@ -98,7 +92,7 @@ static void update_opt3001(){
 static void update_tmp600(){
 	// TMP600 Info
 	tempValue = getTemperature();
-	sprintf(tempBuffer," %0.2f �C\0", tempValue);
+	sprintf(tempBuffer," %0.2f %cC\0", tempValue, 176); // // ascii for degree
 }
 
 // Converts integer to ASCII for display output

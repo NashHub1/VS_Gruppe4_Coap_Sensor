@@ -88,6 +88,7 @@ void sensorOpt3001Setup(void)
 	// Initialize I2C master peripheral, false = 100 kBits/s, true = 400 kBit/s
     I2CMasterInitExpClk(I2C_DEVICE, g_ui32SysClock, false);
     SysCtlDelay(80000);         // wait 800ms for conversion
+    //SysCtlDelay(10000);         // wait 100ms for conversion
 	// Sensor Configuration
 	WriteI2CRegister(OPT3001_I2C_ADDRESS, REG_CONFIGURATION, CONFIG_RESET);
 	//SysCtlDelay(80000);         // wait 800ms for conversion
@@ -109,10 +110,10 @@ uint16_t ReadI2CRegister(uint8_t i2cAdress, uint8_t registerName)
 	I2CMasterSlaveAddrSet(I2C_DEVICE, i2cAdress, false);
 	I2CMasterDataPut(I2C_DEVICE, registerName);
 	I2CMasterControl(I2C_DEVICE, I2C_MASTER_CMD_SINGLE_SEND);
-	SysCtlDelay(500);                           	// wait 500
+	SysCtlDelay(500);                           	// ... master
 	while (I2CMasterBusy(I2C_DEVICE)){}        		// check if I2C still busy
 
-	SysCtlDelay(1000);
+	SysCtlDelay(1000); // ... [500/1000] works
 
 	// Read content (2x8 Bit) of selected register
 	I2CMasterSlaveAddrSet(I2C_DEVICE, i2cAdress, true);
@@ -158,7 +159,8 @@ void WriteI2CRegister(uint8_t i2cAdress, uint8_t registerName, uint16_t value)
 	SysCtlDelay(500);
 	while (I2CMasterBusy(I2C_DEVICE)){}
 
-	SysCtlDelay(80000);         // wait 800ms for conversion
+	//SysCtlDelay(80000);         // wait 800ms for conversion
+	SysCtlDelay(10000);         // wait 100ms for conversion
 }
 
 
@@ -173,9 +175,10 @@ void sensorOpt3001Read(float *lux_val)
 
     // Check conversion ready field if done (BIT = 0)
 	data_rdy = ReadI2CRegister(OPT3001_I2C_ADDRESS, REG_CONFIGURATION);
-	SysCtlDelay(80000);         // wait 800ms for conversion
+	SysCtlDelay(80000);         // wait 100ms for conversion
 	//UARTprintf("\n Reg: 0x%04x", data_rdy);
 	while(!(data_rdy & DATA_RDY_BIT)){ // Bit 7 wird abgefragt
+		// TODO: issue without time interrupt
 		SysCtlDelay(80000);
 	}
 	// read raw lux value from result-register

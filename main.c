@@ -56,7 +56,7 @@ uint32_t g_ui32IPAddress;	// IP address
 //-----------------------------------------------------------------------------
 
 char *s_default_address = "udp://:5683";
-struct mg_mgr g_mgr;
+struct mg_mgr mgr;
 
 
 
@@ -157,8 +157,6 @@ int main(void)
 
 
 
-
-
     // GP-/IO Pin Configuration
     io_init();
 
@@ -218,11 +216,11 @@ int main(void)
 
 
 
-    mg_mgr_init(&g_mgr, NULL);
+    mg_mgr_init(&mgr, NULL);
 
     // Create new task | Stack = (uint16_t)1024 (minimal stack size)
     xTaskCreate(DisplayTask, (const portCHAR *)"displaytask", 1024, NULL, 1, NULL);
-    xTaskCreate(CoapTask, (const portCHAR *)"mongoosetask", 1024, NULL, 1, NULL);
+    xTaskCreate(CoapTask, (const portCHAR *)"coaptask", 1024, NULL, 1, NULL);
 
     // Start the created tasks running
     vTaskStartScheduler();
@@ -250,15 +248,11 @@ void DisplayTask(void *pvParameters)
 
     while(1){
 
-        //TODO: timer + temp
-        // Toggle LED
-        //MAP_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, (MAP_GPIOPinRead(LED1_PORT_BASE, LED1_PIN) ^ LED1_PIN));
     	ioDisplayUpdate(g_ui32IPAddress);
         //io_display(g_ui32IPAddress);
 
-        vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 500 milliseconds
-
-                                          // the task is placed into the blocked state for 500 ms
+        //vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 800 milliseconds // sensor conversion
+    	vTaskDelay( pdMS_TO_TICKS( 800 ) );
     }
 }
 
@@ -267,7 +261,7 @@ void DisplayTask(void *pvParameters)
 void CoapTask(void *pvParameters)
 {
 	struct mg_connection *nc;
-    nc =  mg_bind(&g_mgr, s_default_address, coap_handler);
+    nc =  mg_bind(&mgr, s_default_address, coap_handler);
 
     if (nc == NULL) {
         UARTprintf("Failed to create listener: %s\r\n");
@@ -280,9 +274,8 @@ void CoapTask(void *pvParameters)
 
     while(1){
 
-        mg_mgr_poll(&g_mgr, 0);
+        mg_mgr_poll(&mgr, 0);
         vTaskDelay( pdMS_TO_TICKS( 100 ) ); // delay 100 milliseconds
-                                            // the task is placed into the blocked state for 100 ms
     }
 }
 
