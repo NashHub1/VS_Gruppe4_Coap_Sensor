@@ -1,9 +1,11 @@
-/*
- * temperature_handler.h
- *
- *  Created on: 28.05.2022
- *      Author: David Nguyen
- */
+//*****************************************************************************
+// Authors:     David Nguyen | Michael Stephens
+// Group 4:     CoAP Server - Sensor
+// Course:		Distributed Systems by Prof. Dr. Boris Boeck
+//
+// temperature_handler.h
+//
+//*****************************************************************************
 
 #ifndef HELPER_FUNCTIONS_TEMPERATURE_HANDLER_H_
 #define HELPER_FUNCTIONS_TEMPERATURE_HANDLER_H_

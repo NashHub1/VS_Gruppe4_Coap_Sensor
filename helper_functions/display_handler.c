@@ -1,11 +1,11 @@
-/*
- * display_handler.c
- *
- *  Created on: 31.05.2022
- *      Author: David Nguyen
- */
-
-
+//*****************************************************************************
+// Authors:     David Nguyen | Michael Stephens
+// Group 4:     CoAP Server - Sensor
+// Course:		Distributed Systems by Prof. Dr. Boris Boeck
+//
+// display_handler.c
+//
+//*****************************************************************************
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

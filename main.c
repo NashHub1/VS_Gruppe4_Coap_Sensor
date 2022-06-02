@@ -16,6 +16,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "third_party/mongoose.h"
+
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
 #include "inc/hw_nvic.h"
@@ -29,7 +31,7 @@
 #include "driverlib/rom_map.h"
 #include "utils/uartstdio.h"
 
-#include "third_party/mongoose.h"
+
 #include "utils/lwiplib.h"
 
 
@@ -50,7 +52,7 @@ uint32_t g_ui32IPAddress;	// IP address
 
 
 //-----------------------------------------------------------------------------
-//Coap Defaults
+// Coap Defaults
 //-----------------------------------------------------------------------------
 
 char *s_default_address = "udp://:5683";
@@ -240,9 +242,9 @@ int main(void)
 //*****************************************************************************
 void DisplayTask(void *pvParameters)
 {
-    setupTempHardware();
+    sensorTmp600Setup();
     sensorOpt3001Setup();
-    setup_display();
+    ioDisplaySetup();
     vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 800 milliseconds
 
 
@@ -251,7 +253,7 @@ void DisplayTask(void *pvParameters)
         //TODO: timer + temp
         // Toggle LED
         //MAP_GPIOPinWrite(LED1_PORT_BASE, LED1_PIN, (MAP_GPIOPinRead(LED1_PORT_BASE, LED1_PIN) ^ LED1_PIN));
-    	display_drawer(g_ui32IPAddress);
+    	ioDisplayUpdate(g_ui32IPAddress);
         //io_display(g_ui32IPAddress);
 
         vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 500 milliseconds
