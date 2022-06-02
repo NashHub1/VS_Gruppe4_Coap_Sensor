@@ -49,9 +49,9 @@
 #define configUSE_IDLE_HOOK             0   /* if 1 it is possible to add application specific functionality directly into the idle task through the use of an idle hook */
 #define configUSE_TICK_HOOK             0
 #define configMAX_PRIORITIES            ( 5 )
-#define configMINIMAL_STACK_SIZE        ( ( unsigned short ) 1024 )
+#define configMINIMAL_STACK_SIZE        ( ( unsigned short ) 1024 ) // Grp4: changed to 1024
 #define configTOTAL_HEAP_SIZE           ( ( size_t ) ( 0x18000 ) )
-#define configMAX_TASK_NAME_LEN         ( 24 )
+#define configMAX_TASK_NAME_LEN         ( 24 ) // Grp4: changed to 1024
 #define configUSE_TRACE_FACILITY        1
 #define configUSE_16_BIT_TICKS          0
 #define configIDLE_SHOULD_YIELD         1   /* if 1 the idle task will yield (voluntarily give up whatever remains of its allocated time slice) on each iteration of its loop if there are other Idle priority tasks in the ready state */

@@ -8,8 +8,8 @@
 #ifndef HELPER_FUNCTIONS_DISPLAY_HANDLER_H_
 #define HELPER_FUNCTIONS_DISPLAY_HANDLER_H_
 
-void setup_display(void);
-void display_drawer(uint32_t localIP);
+void ioDisplaySetup(void);
+void ioDisplayUpdate(uint32_t localIP);
 
 static void update_opt3001();
 

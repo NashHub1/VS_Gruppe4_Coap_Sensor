@@ -96,7 +96,7 @@ uint32_t ui32TempValueF;
 // read then displayed on the console via UART0.
 //
 //*****************************************************************************
-void setupTempHardware(void)
+void sensorTmp600Setup(void)
 {
 
     //

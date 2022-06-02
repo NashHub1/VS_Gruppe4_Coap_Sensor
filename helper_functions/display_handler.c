@@ -31,7 +31,7 @@ char	luxBuffer[9];
 char	tempBuffer[9];
 float	luxValue, tempValue;
 
-void setup_display(void){
+void ioDisplaySetup(void){
 
 	// Header
     CFAF128128B0145T_text(10, 7, "[CoAP] Server", CFAF128128B0145T_color_white, CFAF128128B0145T_color_black, 1, 1);
@@ -46,7 +46,7 @@ void setup_display(void){
 }
 
 
-void display_drawer(uint32_t localIP)
+void ioDisplayUpdate(uint32_t localIP)
 {
     char    localStr[22];
     int     l;
