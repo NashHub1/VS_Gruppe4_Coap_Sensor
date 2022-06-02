@@ -141,6 +141,7 @@ int main(void)
     uint32_t ui32User0, ui32User1;
     uint8_t pui8MACArray[8];
 
+    //-----------------------------------------------------------------------------
     // Make sure the main oscillator is enabled because this is required by
     // the PHY.  The system must have a 25MHz crystal attached to the OSC
     // pins.  The SYSCTL_MOSC_HIGHFREQ parameter is used when the crystal
@@ -154,7 +155,7 @@ int main(void)
                                              SYSCTL_OSC_MAIN |
                                              SYSCTL_USE_PLL |
                                              SYSCTL_CFG_VCO_480), 120000000);
-
+    //-----------------------------------------------------------------------------
 
 
     // GP-/IO Pin Configuration

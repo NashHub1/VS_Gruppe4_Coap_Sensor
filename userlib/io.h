@@ -16,14 +16,6 @@ extern "C"
 
 #define BOOSTER_PACK_POSITION 2
 
-/* BP1
-#define BUTTON_PORT_BASE        GPIO_PORTH_BASE
-#define BUTTON_PIN              GPIO_PIN_1
-
-#define BUTTON_ENABLE_PERIPHERAL()   {SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOH);}
-*/
-
-
 
 //*****************************************************************************
 // Prototypes.

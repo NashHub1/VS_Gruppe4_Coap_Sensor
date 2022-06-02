@@ -45,25 +45,3 @@ void io_init(void)
     return;
 }
 
-/* maybe for update local display
-int io_buttonInit(void)
-{
-    BUTTON_ENABLE_PERIPHERAL();
-    // Set BUTTON_PORT_BASE, BUTTON_PORT_BASE as input, SW controlled. With internal weak pull-up
-    GPIOPinTypeGPIOInput(BUTTON_PORT_BASE,  BUTTON_PIN);                                        // Set BUTTON_PORT_BASE,  BUTTON_PIN as input
-    GPIOPadConfigSet(BUTTON_PORT_BASE,  BUTTON_PIN, GPIO_STRENGTH_2MA, GPIO_PIN_TYPE_STD_WPU);  // Activate weak pull up at BUTTON_PORT_BASE,  BUTTON_PIN
-
-}
-int io_buttonGetState(void)
-{
-
-    // Read pin BUTTON_PIN
-    if((GPIOPinRead(BUTTON_PORT_BASE, BUTTON_PIN) & BUTTON_PIN) != 0){
-        // button not pushed (pull-up keeps the line high)
-        return(0);
-    }
-    else{
-        return(1);
-    }
-}
-*/
