@@ -29,6 +29,7 @@
 #include "utils/uartstdio.h"
 #include "drivers/pinout.h"
 
+#include "CFAF128128B0145T/CFAF128128B0145T.h"
 
 #include "CFAF128128B0145T/CFAF128128B0145T.h"
 
@@ -311,7 +312,7 @@ static void  mg_coap_send_by_temperature(struct mg_connection *nc, uint16_t msg_
 		char tempBuffer[200];
 
 		vTemp = getTemperature();
-		sprintf(tempBuffer,"Temperatur: %0.2f °C", vTemp);
+		sprintf(tempBuffer,"Temperatur: %0.2f ï¿½C", vTemp);
 		coap_message.payload.p 			= &tempBuffer[0];
 		coap_message.payload.len		= strlen(&tempBuffer[0]);
 
@@ -379,6 +380,23 @@ static void mg_coap_send_by_lux(struct mg_connection *nc, uint16_t msg_id, struc
 }
 
 
+// Discover ACK-Messager
+// Template: uint32_t mg_coap_send_message() + msg_id + token
+static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, struct mg_str token){
 
+	struct mg_coap_message coap_message;
+	uint32_t res;
+	memset(&coap_message, 0, sizeof(coap_message));				// free options at the end!
+	UARTprintf("hier bin ich");
+	// Create ACK message
+	coap_message.msg_type   	= MG_COAP_MSG_ACK;
+	coap_message.msg_id     	= msg_id;                   	// MSG-ID == Request MSG-ID
+	coap_message.token      	= token;                    	// Token == Request Token
+	coap_message.code_class 	= MG_COAP_CODECLASS_RESP_OK;    // 2.05
+	coap_message.code_detail 	= 5;
 
+	// Content-Formats = application/link-format | 40
+	char *ctOpt = 40;
 
+    // Add new option 12 (content format) :
+    struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);

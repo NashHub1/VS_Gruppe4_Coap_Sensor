@@ -98,7 +98,7 @@ static void update_opt3001(){
 static void update_tmp600(){
 	// TMP600 Info
 	tempValue = getTemperature();
-	sprintf(tempBuffer," %0.2f °C\0", tempValue);
+	sprintf(tempBuffer," %0.2f ï¿½C\0", tempValue);
 }
 
 // Converts integer to ASCII for display output
