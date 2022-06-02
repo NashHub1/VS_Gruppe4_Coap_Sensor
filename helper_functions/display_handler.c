@@ -26,10 +26,11 @@
 
 // The system clock speed.
 extern uint32_t g_ui32SysClock;
+extern float LuxSensorValue;
 
 char	luxBuffer[9];
 char	tempBuffer[9];
-float	luxValue, tempValue;
+float	tempValue;
 
 void ioDisplaySetup(void){
 
@@ -49,7 +50,7 @@ void ioDisplaySetup(void){
 
 void ioDisplayUpdate(uint32_t localIP)
 {
-    char    ipBuffer[21];
+    char    ipBuffer[22];
     int     len;
 
     // IP info
@@ -58,7 +59,8 @@ void ioDisplayUpdate(uint32_t localIP)
     memset(&ipBuffer[len], ' ', 20-len);
     ipBuffer[21] = '\0'; // Null-Terminate
 
-	update_opt3001();
+	sensorOpt3001Read();
+	sprintf(luxBuffer, " %5.2f\0", LuxSensorValue); // auto-scale-max: 10^4
 	update_tmp600();
 
 	// TODO: offline?
@@ -83,11 +85,6 @@ void ioDisplayUpdate(uint32_t localIP)
     return;
 }
 
-static void update_opt3001(){
-	// OPT3001 Info
-	sensorOpt3001Read(&luxValue);
-	sprintf(luxBuffer, " %5.2f\0", luxValue); // auto-scale-max: 10^4
-}
 
 static void update_tmp600(){
 	// TMP600 Info

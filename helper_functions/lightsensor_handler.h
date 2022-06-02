@@ -45,6 +45,6 @@ void WriteI2CRegister(uint8_t i2cAdress, uint8_t registerName, uint16_t value);
 uint16_t ReadI2CRegister(uint8_t i2cAdress, uint8_t registerName);
 
 // Get-Sensor-Data
-void sensorOpt3001Read(float *lux_val);
+void sensorOpt3001Read();
 
 #endif /* HELPER_FUNCTIONS_LIGHTSENSOR_HANDLER_H_ */

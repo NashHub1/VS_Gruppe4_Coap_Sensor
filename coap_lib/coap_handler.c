@@ -45,7 +45,7 @@
 // Global Variables
 
 uint16_t    localMessageID=0;
-
+extern float LuxSensorValue;
 
 
 
@@ -53,7 +53,7 @@ uint16_t    localMessageID=0;
 // Prototypes (static functions)
 void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm);
 
-static void printCoapMSG(struct mg_coap_message *cm);
+static void uartDisplay(struct mg_coap_message *cm);
 
 // Get URI Path from coap message structure
 // Combine URI-Path options to a full URI-Path
@@ -119,7 +119,7 @@ void coap_handler(struct mg_connection *nc, int ev, void *p) {
 void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 {
 
-    printCoapMSG(cm);
+    uartDisplay(cm);
 
     // If Request, check only after UriPath (and detail)
     if(cm->code_class == MG_COAP_CODECLASS_REQUEST){
@@ -153,13 +153,13 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 
 			res = mg_coap_send_message(nc, &coap_message);
 			if (res == 0){
-				printCoapMSG(&coap_message);
+				uartDisplay(&coap_message);
 				UARTprintf("\n[ERR REPLIED]\n");
 			}else{
 				UARTprintf("\n[ERROR: %d]\n", res);
 			}
 			err = 1;
-			printCoapMSG(&coap_message);
+			uartDisplay(&coap_message);
 			mg_coap_free_options(&coap_message);
 
 		}
@@ -169,7 +169,7 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 
 }
 
-static void printCoapMSG(struct mg_coap_message *cm)
+static void uartDisplay(struct mg_coap_message *cm)
 {
 	char payloadBuffer[128];
 
@@ -273,7 +273,7 @@ static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, 
 		err = 1;
 		UARTprintf("\n[ERROR: %d]\n", res);
 	}
-	printCoapMSG(&coap_message);
+	uartDisplay(&coap_message);
     mg_coap_free_options(&coap_message);
     return;
 }
@@ -324,7 +324,7 @@ static void  mg_coap_send_by_temperature(struct mg_connection *nc, uint16_t msg_
 		err = 1;
 		UARTprintf("\n[ERROR: %d]\n", res);
 	}
-	printCoapMSG(&coap_message);
+	uartDisplay(&coap_message);
     mg_coap_free_options(&coap_message);
     return;
 }
@@ -356,14 +356,14 @@ static void mg_coap_send_by_lux(struct mg_connection *nc, uint16_t msg_id, struc
 
     if (coap_message.code_detail == 1){
 
-		float readLux;
+		//float readLux;
 		char luxBuffer[200];
 
 		//Read and convert OPT values
-		sensorOpt3001Read(&readLux);
+		//sensorOpt3001Read(&readLux);
 
 		//content_format_option = 0x28;
-		sprintf(luxBuffer,"Light: %5.2f", readLux);
+		sprintf(luxBuffer,"Light: %5.2f", LuxSensorValue);
 		coap_message.payload.p 		= &luxBuffer[0];
 		coap_message.payload.len	= strlen(&luxBuffer[0]);
     }

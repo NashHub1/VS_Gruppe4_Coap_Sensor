@@ -204,7 +204,7 @@ int main(void)
     pui8MACArray[5] = ((ui32User1 >> 16) & 0xff);
 
 
-    // Initialize the lwIP library, using DHCP.
+    // Initialize the lwIP library, using DHCP. (
     lwIPInit(g_ui32SysClock, pui8MACArray, 0, 0, 0, IPADDR_USE_DHCP);
 
 
@@ -243,8 +243,6 @@ void DisplayTask(void *pvParameters)
     sensorTmp600Setup();
     sensorOpt3001Setup();
     ioDisplaySetup();
-    vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 800 milliseconds
-
 
     while(1){
 
@@ -252,7 +250,7 @@ void DisplayTask(void *pvParameters)
         //io_display(g_ui32IPAddress);
 
         //vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 800 milliseconds // sensor conversion
-    	vTaskDelay( pdMS_TO_TICKS( 800 ) );
+    	vTaskDelay( pdMS_TO_TICKS( 500 ) );
     }
 }
 
@@ -260,6 +258,8 @@ void DisplayTask(void *pvParameters)
 
 void CoapTask(void *pvParameters)
 {
+	vTaskDelay( pdMS_TO_TICKS( 1500 ) ); // delay 1400 milliseconds for other task
+
 	struct mg_connection *nc;
     nc =  mg_bind(&mgr, s_default_address, coap_handler);
 

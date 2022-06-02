@@ -11,7 +11,6 @@
 void ioDisplaySetup(void);
 void ioDisplayUpdate(uint32_t localIP);
 
-static void update_opt3001();
 
 static void update_tmp600();
 
