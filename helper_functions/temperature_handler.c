@@ -96,7 +96,7 @@ uint32_t ui32TempValueF;
 // read then displayed on the console via UART0.
 //
 //*****************************************************************************
-void sensorTmp600Setup(void)
+void sensorTmp006Setup(void)
 {
 
     //
@@ -181,9 +181,9 @@ void updateTemp(void)
     */
 
 }
-
+// TODO: as extern variable not works... maybe Task update before setup?
 float getTemperature(void){
-    float                   tempFloat;
+    float tempFloat;
 
     updateTemp();
     tempFloat = ui32TempValueC;

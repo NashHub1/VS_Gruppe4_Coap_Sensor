@@ -54,7 +54,6 @@ uint32_t g_ui32IPAddress;	// IP address
 //-----------------------------------------------------------------------------
 // Coap Defaults
 //-----------------------------------------------------------------------------
-
 char *s_default_address = "udp://:5683";
 struct mg_mgr mgr;
 
@@ -131,7 +130,6 @@ void lwIPHostTimerHandler(void)
 }
 
 
-
 //-----------------------------------------------------------------------------
 // Main function
 // Coap Server- Sensor
@@ -162,7 +160,6 @@ int main(void)
     io_init();
 
 
-
     // debug terminal
     UARTStdioConfig(0, 115200, g_ui32SysClock);
 
@@ -171,8 +168,6 @@ int main(void)
     UARTprintf("===================================\n");
     UARTprintf("CoAP - Server & Sensor - Gruppe 4\n");
     UARTprintf("===================================\n\n");
-
-
 
 
     // Configure the hardware MAC address for Ethernet Controller filtering of
@@ -209,14 +204,6 @@ int main(void)
     lwIPInit(g_ui32SysClock, pui8MACArray, 0, 0, 0, IPADDR_USE_DHCP);
 
 
-
-
-    // Wait for valid IP
-    //while((g_ui32IPAddress == 0) || (g_ui32IPAddress == 0xffffffff)){};
-    //SysCtlDelay(10000);
-
-
-
     mg_mgr_init(&mgr, NULL);
 
     // Create new task | Stack = (uint16_t)1024 (minimal stack size)
@@ -241,16 +228,13 @@ int main(void)
 //*****************************************************************************
 void DisplayTask(void *pvParameters)
 {
-    sensorTmp600Setup();
+    sensorTmp006Setup();
     sensorOpt3001Setup();
     ioDisplaySetup();
 
     while(1){
-
     	ioDisplayUpdate(g_ui32IPAddress);
-        //io_display(g_ui32IPAddress);
 
-        //vTaskDelay( pdMS_TO_TICKS( 800 ) ); // delay 800 milliseconds // sensor conversion
     	vTaskDelay( pdMS_TO_TICKS( 500 ) );
     }
 }
@@ -259,7 +243,7 @@ void DisplayTask(void *pvParameters)
 
 void CoapTask(void *pvParameters)
 {
-	vTaskDelay( pdMS_TO_TICKS( 1500 ) ); // delay 1400 milliseconds for other task
+	vTaskDelay( pdMS_TO_TICKS( 1000 ) ); // delay 1000 milliseconds for setup
 
 	struct mg_connection *nc;
     nc =  mg_bind(&mgr, s_default_address, coap_handler);

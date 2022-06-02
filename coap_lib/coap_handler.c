@@ -40,33 +40,19 @@
 #include "helper_functions/lightsensor_handler.h"
 
 
-//const char *DISCOVER_PATH[] = {".well-known/core"};
-
+//*****************************************************************************
 // Global Variables
-
+//*****************************************************************************
 uint16_t    localMessageID=0;
 extern float LuxSensorValue;
 
-
-
-// Static funtions
-// Prototypes (static functions)
+//*****************************************************************************
+// Prototypes
+//*****************************************************************************
 void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm);
-
 static void uartDisplay(struct mg_coap_message *cm);
-
-// Get URI Path from coap message structure
-// Combine URI-Path options to a full URI-Path
-void getURIPath(char *pURIPath, struct mg_coap_message *cm);
-
-const char *getCodeStr(struct mg_coap_message *cm);
-
 static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, struct mg_str token);
-static void  mg_coap_send_by_temperature(struct mg_connection *nc, uint16_t msg_id, struct mg_str token, uint8_t msg_type, uint8_t detail);
-static void mg_coap_send_by_lux(struct mg_connection *nc, uint16_t msg_id, struct mg_str token, uint8_t msg_type, uint8_t detail);
-
-
-int err = 0;
+uint16_t getAcceptFormat(struct mg_coap_message *cm);
 
 
 //*****************************************************************************
@@ -74,31 +60,24 @@ int err = 0;
 //*****************************************************************************
 void coap_handler(struct mg_connection *nc, int ev, void *p) {
 
-	// TODO: polling result going through --> switch case! return? blocked?
-	// TODO: how to secure connection? dtls??? - alternatively with COAP_CON?
-
+	// Polling result going through --> switch case! -> return if so
+	if (ev == MG_EV_POLL){
+        return;
+    }
 	struct mg_coap_message *cm = (struct mg_coap_message *) p;
 	switch (ev) {
-		case MG_EV_COAP_CON:       			// CoAP CON received
-			UARTprintf("\n[CON RECIEVED]");	//, cm->msg_id);
+		case MG_EV_COAP_CON: // CoAP CON received
+			UARTprintf("\n[CON RECIEVED]");
 			// check if request
 			coapMessage_handler(nc, cm);
-			if (err == 0){
-				UARTprintf("\n[CON REPLIED]");
-			}else{
-				err = 0;
-			}
 			UARTprintf("\n----------------------------------------");
 			break;
 
 		case MG_EV_COAP_NOC:{
-			UARTprintf("\n[NOC RECIEVED]"); //, cm->msg_id);
+			// TODO: No DTLS but can use CON as alternative
+			// to "secure" partly a connection without DTLS, NOC can be ignored.
+			UARTprintf("\n[NOC RECIEVED]");
 			coapMessage_handler(nc, cm);
-			if (err == 0){
-				UARTprintf("\n[NOC REPLIED]");
-			}else{
-				err = 0;
-			}
 			UARTprintf("\n----------------------------------------");
 			break;
 		}
@@ -118,33 +97,107 @@ void coap_handler(struct mg_connection *nc, int ev, void *p) {
 //*****************************************************************************
 void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 {
+	uint32_t res;
+
+	struct mg_coap_message coap_message;
+	memset(&coap_message, 0, sizeof(coap_message));
+
 
     uartDisplay(cm);
 
-    // If Request, check only after UriPath (and detail)
-    if(cm->code_class == MG_COAP_CODECLASS_REQUEST){
+    // Only Request + Get == 1
+    if(cm->code_class == MG_COAP_CODECLASS_REQUEST && cm->code_detail == 1){
 
-    	// clear coap_message buffer (for reply/ACK)
-        //memset(&coap_message, 0, sizeof(coap_message));
-
-
-        /* sensor ... */
-		// if No. 11 = UriPath
+    	// if discover == .well_known/core
 		if(mg_vcmp(&cm->options->value, DISCOVER_PATH) == 0){	// ...like strcmp
 			mg_coap_send_by_discover(nc, cm->msg_id, cm->token);
 
+/*[Temperaturesensor]============================================================*/
+
 		}else if(mg_vcmp(&cm->options->value, TMP_BASEPATH) == 0){
 
-			mg_coap_send_by_temperature(nc, cm->msg_id, cm->token, cm->msg_type, cm->code_detail);
+			// Create ACK message
+			if(cm->msg_type == MG_COAP_MSG_CON){
+				coap_message.msg_type   	= MG_COAP_MSG_ACK;
+				coap_message.msg_id     	= cm->msg_id;            // MSG-ID == Request MSG-ID
+			}else{
+				coap_message.msg_type   	= MG_COAP_MSG_NOC;
+				coap_message.msg_id			= localMessageID++;
+			}
+
+			coap_message.token      		= cm->token;                 // Token == Request Token
+			coap_message.code_class 		= MG_COAP_CODECLASS_RESP_OK; // 2.05
+			coap_message.code_detail 		= 5;
+
+			char *ctOpt = getAcceptFormat(cm);
+
+			// Add new option 12 (content format) :
+			struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
+
+			float vTemp; // Issue with global variable...
+			char tempBuffer[40];
+			vTemp = getTemperature();
+
+			if (ctOpt == 0){
+
+
+				sprintf(tempBuffer,"Temperatur: %0.2f %cC", vTemp, 176); // ascii for degree
+
+
+
+			}
+			coap_message.payload.p 			= &tempBuffer[0];
+			coap_message.payload.len		= strlen(&tempBuffer[0]);
+
+			res = mg_coap_send_message(nc, &coap_message);
+
+/*[Lightsensor]=====================================================================*/
 
 		}else if(mg_vcmp(&cm->options->value, LUX_BASEPATH) == 0){
 
-			mg_coap_send_by_lux(nc, cm->msg_id, cm->token, cm->msg_type, cm->code_detail);
-		}else{
-			// Not Found
-			uint32_t res;
-			struct mg_coap_message  coap_message;
+			// Create ACK message
+			if(cm->msg_type == MG_COAP_MSG_CON){
+				coap_message.msg_type   	= MG_COAP_MSG_ACK;
+				coap_message.msg_id     	= cm->msg_id;                   // MSG-ID == Request MSG-ID
+			}else{
+				coap_message.msg_type   	= MG_COAP_MSG_NOC;
+				coap_message.msg_id			= localMessageID++;
+			}
 
+			coap_message.token      		= cm->token;                    	// Token == Request Token
+			coap_message.code_class 		= MG_COAP_CODECLASS_RESP_OK;    	// 2.05
+			coap_message.code_detail 		= 5;
+
+			char *ctOpt = getAcceptFormat(cm);
+
+			// Add new option 12 (content format) :
+			struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
+
+			char luxBuffer[40];
+
+			if (ctOpt == FORMAT_PLAIN){ // if
+
+				sprintf(luxBuffer,"Brightness: %5.2f", LuxSensorValue); // brighness value
+
+			}
+
+			///=============================================================================
+			/// LabTask: JSON-Format
+			/// - TODO: Add new format for JSON
+			/// -
+			/// - LuxSensorValue is an extern float from <helper_functions/light_sensor.h>
+			/// =============================================================================
+
+			coap_message.payload.p 		= &luxBuffer[0];
+			coap_message.payload.len	= strlen(&luxBuffer[0]);
+
+			res = mg_coap_send_message(nc, &coap_message);
+
+
+
+		}else{
+
+			// Not Found
 			coap_message.msg_type   = MG_COAP_MSG_ACK;
 			coap_message.msg_id     = cm->msg_id;
 			coap_message.token      = cm->token;
@@ -152,56 +205,50 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 			coap_message.code_detail = 4;
 
 			res = mg_coap_send_message(nc, &coap_message);
-			if (res == 0){
-				uartDisplay(&coap_message);
-				UARTprintf("\n[ERR REPLIED]\n");
-			}else{
-				UARTprintf("\n[ERROR: %d]\n", res);
-			}
-			err = 1;
-			uartDisplay(&coap_message);
-			mg_coap_free_options(&coap_message);
 
 		}
 
+
+		uartDisplay(&coap_message);
+		mg_coap_free_options(&coap_message);
+
+		if (res == 0){
+			UARTprintf("[Message Replied]");
+		}else{
+			UARTprintf("\n[ERROR: %d]\n", res);
+		}
 
     }
 
 }
 
+//*****************************************************************************
+// UART Print of CoAP-Message (not all information)
+//*****************************************************************************
 static void uartDisplay(struct mg_coap_message *cm)
 {
 	char payloadBuffer[128];
 
-	 /* Display CoAP-Message */
+	/* Display CoAP-Message
 
-	/* Note: Version and Token not included!
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	|Ver| T |  TKL  |      Code     |          Message ID           |
-	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
+	Note: not all information are included in header print
+	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	| Type  |    Code     |          Message ID           |
+	+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+*/
 
 	UARTprintf("\n----------------------------------------");
+
 	// Message-Types: Type | Name (not included fot the moment)
     UARTprintf("\n| Type: %d | ", cm->msg_type);
+
     // Method-Codes X.0Y | X = Code Class, Y = Code Detail
     UARTprintf("Code: %d.0%d | ", cm->code_class, cm->code_detail);
+
     // Message ID
     UARTprintf("MSG-ID: %d |", cm->msg_id);
-	UARTprintf("\n----------------------------------------");
+	UARTprintf("\n----------------------------------------\r\n");
 
-	/*
-	if(cm->token.len > 0){
-		UARTprintf("0x");
-        for(i=0; i<cm->token.len; i++){
-            value = *((uint8_t *)(cm->token.p)+i);
-            sprintf(&localStr[2*i], "%2.2x", value);
-        }
-        UARTprintf("%s",localStr);
-    }*/
-
-    UARTprintf("\r\n");
-
-    /* Payload */
+    /* Payload CoAP-Message */
     UARTprintf("\nPayload:");
 
     memcpy(&payloadBuffer[0], cm->payload.p, cm->payload.len);
@@ -213,12 +260,14 @@ static void uartDisplay(struct mg_coap_message *cm)
 }
 
 
-// Discover ACK-Messager
-// Template: uint32_t mg_coap_send_message() + msg_id + token
+//*********************************************************************************
+// Discover Response (outsourcing for better overview only, it was not neccessary)
+//*********************************************************************************
 static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, struct mg_str token){
 
-	struct mg_coap_message coap_message;
 	uint32_t res;
+	struct mg_coap_message coap_message;
+
 	memset(&coap_message, 0, sizeof(coap_message));				// free options at the end!
 
 	// Create ACK message
@@ -229,18 +278,18 @@ static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, 
 	coap_message.code_detail 	= 5;
 
 	// Content-Formats = application/link-format | 40
-	char *ctOpt = 40;
+	char *ctOpt = FORMAT_LINK;
 
     // Add new option 12 (content format) :
     struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
 
-    /* --------------------------------------------------------------------
+    /* ====================================================================
      * Content of Discover
      *
-     * <path_tree>
-     * - rt = resource type
-     * - title
-     *--------------------------------------------------------------------*/
+     * <sensor>
+     * - rt 	= resource type
+     * - title	= title
+     *=====================================================================*/
     char* cont_text =
 
 			"</temperature>;"
@@ -249,120 +298,49 @@ static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, 
 
     		"</light>;"
     			"title=\"luminous value\";"
-    			"rt=\"light-lux\"";//
+    			"rt=\"light-lux\"";
 
     coap_message.payload.p 		= cont_text;
     coap_message.payload.len	= strlen(cont_text);
 
 	res = mg_coap_send_message(nc, &coap_message);
 
-	if (res != 0){
-		err = 1;
-		UARTprintf("\n[ERROR: %d]\n", res);
-	}
 	uartDisplay(&coap_message);
     mg_coap_free_options(&coap_message);
-    return;
-}
 
-static void  mg_coap_send_by_temperature(struct mg_connection *nc, uint16_t msg_id, struct mg_str token, uint8_t msg_type, uint8_t detail){
-
-	struct mg_coap_message coap_message;
-	uint32_t res;
-	memset(&coap_message, 0, sizeof(coap_message));				// free options at the end!
-
-
-	// Create ACK message
-	if(msg_type == MG_COAP_MSG_CON){
-		coap_message.msg_type   	= MG_COAP_MSG_ACK;
-		coap_message.msg_id     	= msg_id;                   	// MSG-ID == Request MSG-ID
+	if (res == 0){
+		UARTprintf("[Message Replied]");
 	}else{
-		coap_message.msg_type   	= MG_COAP_MSG_NOC;
-		coap_message.msg_id			= localMessageID++;
-	}
-
-	coap_message.token      	= token;                    	// Token == Request Token
-	coap_message.code_class 	= MG_COAP_CODECLASS_RESP_OK;    // 2.05
-
-	coap_message.code_detail 	= detail;
-
-	// Content-Formats = TODO: extra methode
-	char *ctOpt = 0;
-
-    // Add new option 12 (content format) :
-    struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
-
-    if (coap_message.code_detail == 1){
-    	//uint32_t vTemp;
-
-		float vTemp;
-		char tempBuffer[200];
-
-		vTemp = getTemperature();
-		sprintf(tempBuffer,"Temperatur: %0.2f %cC", vTemp, 176); // ascii for degree
-		coap_message.payload.p 			= &tempBuffer[0];
-		coap_message.payload.len		= strlen(&tempBuffer[0]);
-
-    }
-
-	res = mg_coap_send_message(nc, &coap_message);
-
-	if (res != 0){
-		err = 1;
 		UARTprintf("\n[ERROR: %d]\n", res);
 	}
-	uartDisplay(&coap_message);
-    mg_coap_free_options(&coap_message);
     return;
 }
 
 
-static void mg_coap_send_by_lux(struct mg_connection *nc, uint16_t msg_id, struct mg_str token, uint8_t msg_type, uint8_t detail){
+///*****************************************************************************************
+/// Accept-Handler for LabTask
+/// TODO: set the correct Macro for JSON
+///
+/// - FORMAT_DUMMY has value 99 <helper_functions/coap_handler.h>, fill the correct value
+/// -
+///*****************************************************************************************
+uint16_t getAcceptFormat(struct mg_coap_message *cm){
 
-	struct mg_coap_message coap_message;
-	uint32_t res;
-	memset(&coap_message, 0, sizeof(coap_message));				// free options at the end!
+	struct mg_coap_option *opt = (struct mg_coap_option *) cm->options->next;
+	struct mg_str val = (struct mg_str) opt->value;
 
-	// Create ACK message
-	if(msg_type == MG_COAP_MSG_CON){
-		coap_message.msg_type   	= MG_COAP_MSG_ACK;
-		coap_message.msg_id     	= msg_id;                   	// MSG-ID == Request MSG-ID
-	}else{
-		coap_message.msg_type   	= MG_COAP_MSG_NOC;
-		coap_message.msg_id			= localMessageID++;
+	if(opt->number == OPTION_CONTENT_FORMAT){		// Option 17 (for client) format request
+		///******************************
+		if(*(val.p) == FORMAT_DUMMY){
+			return FORMAT_DUMMY;
+		///******************************
+		}else if(*(val.p) == FORMAT_PLAIN){			// Format 0
+			return 0;
+		}
 	}
-	coap_message.token      	= token;                    	// Token == Request Token
-	coap_message.code_class 	= MG_COAP_CODECLASS_RESP_OK;    // 2.05
-	coap_message.code_detail 	= detail; 						// abruf
-
-	// Content-Formats = TODO: extra methode
-	char *ctOpt = 0;
-
-    // Add new option 12 (content format) :
-    struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
-
-    if (coap_message.code_detail == 1){
-
-		//float readLux;
-		char luxBuffer[200];
-
-		//Read and convert OPT values
-		//sensorOpt3001Read(&readLux);
-
-		//content_format_option = 0x28;
-		sprintf(luxBuffer,"Light: %5.2f", LuxSensorValue);
-		coap_message.payload.p 		= &luxBuffer[0];
-		coap_message.payload.len	= strlen(&luxBuffer[0]);
-    }
-
-	res = mg_coap_send_message(nc, &coap_message);
-
-	if (res != 0){
-		err = 1;
-		UARTprintf("\n[ERROR: %d]\n", res);
-	}
-
-    mg_coap_free_options(&coap_message);
-    return;
+	// No Accept Format
+	return NULL;
 }
+
+
 

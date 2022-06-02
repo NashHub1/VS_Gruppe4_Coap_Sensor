@@ -15,7 +15,7 @@ extern "C"
 {
 #endif
 
-int sensorTmp600Setup(void);
+int sensorTmp006Setup(void);
 
 void getTemp(char *getTemp);
 
