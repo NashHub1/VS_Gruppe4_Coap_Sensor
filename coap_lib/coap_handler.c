@@ -180,11 +180,11 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 
 				sprintf(luxBuffer,"Brightness: %5.2f", LuxSensorValue); // brighness value
 
-			}else if (ctOpt == FORMAT_JSON){
+			}/*else if (ctOpt == FORMAT_JSON){
 
 				sprintf(luxBuffer, "{\n\"Brightness\" : \"%5.2f\" \n}\0", LuxSensorValue);
 
-			}
+			}*/
 
 			///=============================================================================
 			/// LabTask: JSON-Format
@@ -326,8 +326,7 @@ static void mg_coap_send_by_discover(struct mg_connection *nc, uint16_t msg_id, 
 /// Accept-Handler for LabTask
 /// TODO: set the correct Macro for JSON
 ///
-/// - FORMAT_DUMMY has value 99 <helper_functions/coap_handler.h>, fill the correct value
-/// -
+/// - FORMAT_JSON has value 99 <helper_functions/coap_handler.h>, fill the correct value
 ///*****************************************************************************************
 uint16_t getAcceptFormat(struct mg_coap_message *cm){
 
