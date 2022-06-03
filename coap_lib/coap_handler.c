@@ -98,7 +98,6 @@ void coap_handler(struct mg_connection *nc, int ev, void *p) {
 void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 {
 	uint32_t res;
-	char default_format = 0;
 
 	struct mg_coap_message coap_message;
 	memset(&coap_message, 0, sizeof(coap_message));
@@ -136,16 +135,16 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 			struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
 
 			float vTemp; // Issue with global variable...
-			char tempBuffer[100];
+			char tempBuffer[200];
 			vTemp = getTemperature();
 
-			if (&ctOpt == 0){
+			if(ctOpt == FORMAT_PLAIN){
 
-				sprintf(tempBuffer,"Temperatur: %0.2f %cC", vTemp, 176); // ascii for degree
+				sprintf(tempBuffer,"Temperature: %0.2f %cC", vTemp, 176); // ascii for degree
 
-			}else if (&ctOpt == 50){
+			}else if(ctOpt == FORMAT_JSON){
 
-				sprintf(tempBuffer, " { Temperature: %0.2f }", vTemp);
+				sprintf(tempBuffer, "{\n\"Temperature\" : \"%0.2f\" \n}", vTemp);
 
 			}
 			coap_message.payload.p 			= &tempBuffer[0];
@@ -170,22 +169,22 @@ void coapMessage_handler(struct mg_connection *nc, struct mg_coap_message *cm)
 			coap_message.code_class 		= MG_COAP_CODECLASS_RESP_OK;    	// 2.05
 			coap_message.code_detail 		= 5;
 
-			char *ctOpt = getAcceptFormat(cm);;
+			char *ctOpt = getAcceptFormat(cm);
 
 			// Add new option 12 (content format) :
 			struct mg_coap_add_option *mg_opt = mg_coap_add_option(&coap_message, 12, &ctOpt, 1);
 
-			char luxBuffer[100];
+			char luxBuffer[200];
 
 			if (ctOpt == FORMAT_PLAIN){
 
 				sprintf(luxBuffer,"Brightness: %5.2f", LuxSensorValue); // brighness value
 
-			}/*else if (accFormat == FORMAT_JSON){
+			}else if (ctOpt == FORMAT_JSON){
 
-				sprintf(luxBuffer, "{ Brightness: %5.2f }", LuxSensorValue);
+				sprintf(luxBuffer, "{\n\"Brightness\" : \"%5.2f\" \n}\0", LuxSensorValue);
 
-			}*/
+			}
 
 			///=============================================================================
 			/// LabTask: JSON-Format
@@ -337,20 +336,24 @@ uint16_t getAcceptFormat(struct mg_coap_message *cm){
 
 	if(opt->number == OPTION_ACCEPT){					// Option 17 (for client) format request
 		///******************************
-		if(*(val.p) == 50){
-			return 50;
+		if(*(val.p) == FORMAT_JSON){
+			return FORMAT_JSON;
 		///******************************
-		}else if(*(val.p) == 0){					// Format 0
-			return 0;
+		}else if(*(val.p) == FORMAT_PLAIN){				// Format 0
+			return FORMAT_PLAIN;
 		}
 	}else if (opt->number == OPTION_CONTENT_FORMAT){	// Option 12 for payload
-		if(*(val.p) == 50){
-			return 50;
-		}else if(*(val.p) == 0){				// Format 0
-			return 0;
+
+		if(*(val.p) == FORMAT_JSON){
+			return FORMAT_JSON;
+
+		}else if(*(val.p) == FORMAT_PLAIN){				// Format 0
+
+			return FORMAT_PLAIN;
 		}
 	}
 	// No Accept Format
+	return NULL;
 }
 
 

@@ -19,7 +19,7 @@
 /// JSON: https://www.w3resource.com/JSON/structures.php
 //*****************************************************************************
 #define FORMAT_DUMMY 	99
-#define FORMAT_JSON		99
+#define FORMAT_JSON		50
 //*****************************************************************************
 #define FORMAT_PLAIN	0
 #define FORMAT_LINK		40
